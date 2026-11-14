@@ -1,7 +1,7 @@
 {
-  "name": "pilarluiz",
+  "name": "piluiz",
   "version": "0.1.0",
-  "homepage": "https://pilarluiz.github.io",
+  "homepage": "https://piluiz.github.io",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.14.0",

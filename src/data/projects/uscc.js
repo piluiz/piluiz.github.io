@@ -62,7 +62,7 @@ const uscc = {
     "SSA",
     "Register Allocation",
   ],
-  githubLink: "https://github.com/pilarluiz/uscc",
+  githubLink: "https://github.com/piluiz/uscc",
   reportLink: null,
   paperLink: null,
   liveDemo: null,

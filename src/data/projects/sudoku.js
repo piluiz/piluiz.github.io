@@ -17,7 +17,7 @@ The outcome was a fully functional hardware-based Sudoku game that demonstrated 
   techStack: ["Verilog", "FPGA", "VGA"],
   reportLink: "/documents/SINdoku_ProjectReport.pdf",
   paperLink: null,
-  githubLink: "https://github.com/pilarluiz/SINdoku",
+  githubLink: "https://github.com/piluiz/SINdoku",
   liveDemo: null,
   slug: "sudoku",
   tags: ["Verilog", "FPGA", "VGA"],

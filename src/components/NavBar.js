@@ -35,7 +35,7 @@ function NavBar() {
             >
               <FontAwesomeIcon icon={faLinkedin} className="fa-icon" />
             </Nav.Link>
-            <Nav.Link href="https://github.com/pilarluiz" target="_blank">
+            <Nav.Link href="https://github.com/piluiz" target="_blank">
               <FontAwesomeIcon icon={faGithub} className="fa-icon" />
             </Nav.Link>
             <Nav.Link

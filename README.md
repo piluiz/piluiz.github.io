@@ -42,7 +42,7 @@ npm run build
 
 This repo is configured to deploy to GitHub Pages via the `gh-pages` package.
 
-1. Ensure `homepage` in `package.json` is set to `https://pilarluiz.github.io`.
+1. Ensure `homepage` in `package.json` is set to `https://piluiz.github.io`.
 2. Build and publish:
    ```bash
    npm run deploy

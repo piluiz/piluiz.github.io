@@ -17,7 +17,7 @@ The outcome was a working prototype that successfully demonstrated intelligent w
   techStack: ["Embedded C", "ATMega328P"],
   reportLink: "/documents/SleepRight_FinalReport.pdf",
   paperLink: null,
-  githubLink: "https://github.com/pilarluiz/sleep-right",
+  githubLink: "https://github.com/piluiz/sleep-right",
   liveDemo: null,
   slug: "sleep-right",
   tags: ["Embedded C", "ATMega328P"],
