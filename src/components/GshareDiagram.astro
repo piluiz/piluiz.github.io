@@ -1,0 +1,113 @@
+---
+// Simplified animated Gshare predictor: a loop branch whose outcomes repeat
+// T T T N. Gshare keeps a 2-bit counter per recent history (really indexed by
+// PC xor history), so it learns that after "T T T" the loop exits.
+---
+
+<section class="box gshare">
+  <div class="label">[ <b>gshare.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated Gshare predictor learning a loop branch: after three taken branches it learns to predict the loop exit"></pre>
+  <p class="note">
+    A loop branch goes taken, taken, taken, then not taken to exit. Gshare keeps a counter for each recent history,
+    so it can learn that after T T T comes the exit. (In hardware, the counter is picked by PC xor history.)
+  </p>
+</section>
+
+<style>
+  .gshare { margin: 28px 0; }
+  .gshare pre { margin: 0 0 12px; font: 13px/1.7 var(--mono); overflow-x: auto; color: var(--muted); border: 0; padding: 0; }
+  .gshare :global(.hi) { color: var(--accent); font-weight: 600; }
+  .gshare :global(.ink) { color: var(--ink); }
+  .gshare :global(.dim) { color: var(--faint); }
+  .gshare :global(.ok) { color: var(--bg); background: var(--accent); font-weight: 600; }
+  .gshare :global(.bad) { color: var(--ink); text-decoration: line-through; }
+  .gshare .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .gshare .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>
+
+<script>
+  const T = 1, N = 0;
+  const PATTERN = [T, T, T, N]; // the loop branch, repeating
+  const BRANCHES = 12;
+  // The four histories this loop produces (oldest → newest), in the order they occur.
+  const ROWS = ["TTN", "TNT", "NTT", "TTT"];
+
+  type Step = { n: number; row: number; before: number[]; after: number[]; pred: number; actual: number; hits: number };
+  function simulate(): Step[] {
+    const ctr = ROWS.map(() => 1); // every counter starts "weakly not taken"
+    let hist = ["T", "T", "N"]; // as if the loop has been running
+    let hits = 0;
+    const steps: Step[] = [];
+    for (let n = 0; n < BRANCHES; n++) {
+      const row = ROWS.indexOf(hist.join(""));
+      const pred = ctr[row] >= 2 ? T : N;
+      const actual = PATTERN[n % PATTERN.length];
+      if (pred === actual) hits++;
+      const before = ctr.slice();
+      ctr[row] = actual ? Math.min(3, ctr[row] + 1) : Math.max(0, ctr[row] - 1);
+      steps.push({ n: n + 1, row, before, after: ctr.slice(), pred, actual, hits });
+      hist = [...hist.slice(1), actual ? "T" : "N"];
+    }
+    return steps;
+  }
+  const STEPS = simulate();
+
+  // counter 0..3 drawn as a slider between "not taken" and "taken"
+  const slider = (v: number) => "N " + "────".split("").map((c, i) => (i === v ? "●" : c)).join("") + " T";
+  const word = (b: number) => (b ? "taken" : "not taken");
+
+  function frame(f: number): string {
+    const s = STEPS[Math.floor(f / 2)];
+    const learn = f % 2 === 1;
+    const counters = learn ? s.after : s.before;
+    const hit = s.pred === s.actual;
+
+    const stepLbl = learn
+      ? `<span class="dim">predict</span>  ▸ <span class="hi">check &amp; learn</span>`
+      : `▸ <span class="hi">predict</span>  <span class="dim">check &amp; learn</span>`;
+    let out = `<span class="dim">branch ${String(s.n).padStart(2)} of ${BRANCHES}</span>          ${stepLbl}\n\n`;
+    out += `<span class="dim">history     counter</span>\n`;
+    ROWS.forEach((r, i) => {
+      const label = r.split("").join(" ");
+      const cur = i === s.row;
+      const sl = slider(counters[i]);
+      out += cur ? `<span class="hi">${label}</span>       <span class="ink">${sl}</span>   <span class="hi">◀ now</span>\n` : `${label}       ${sl}\n`;
+    });
+    out += "\n";
+    if (!learn) {
+      out += `predict  <span class="ink">${word(s.pred)}</span>\n`;
+    } else {
+      out += `predict  <span class="ink">${word(s.pred)}</span>   actual  <span class="ink">${word(s.actual)}</span>   ${hit ? '<span class="ok"> hit </span>' : '<span class="bad">miss</span>'}\n`;
+    }
+    const doneN = learn ? s.n : s.n - 1;
+    const hitsN = learn ? s.hits : s.hits - (hit ? 1 : 0);
+    out += `<span class="dim">accuracy ${hitsN}/${doneN}</span>\n\n`;
+
+    let cap: string;
+    const exit = ROWS[s.row] === "TTT";
+    if (!learn) cap = `look up the counter for history ${ROWS[s.row].split("").join(" ")}`;
+    else if (exit && hit) cap = "after T T T the loop exits, and gshare saw it coming";
+    else if (hit) cap = `right, so the counter gets more confident in ${word(s.actual)}`;
+    else cap = `wrong, so the counter moves toward ${word(s.actual)}`;
+    out += `<span class="hi">→</span> ${cap}`;
+    return out;
+  }
+
+  document.querySelectorAll<HTMLElement>(".gshare").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    const LAST = STEPS.length * 2 - 1;
+    let f = 0;
+    let timer: number | undefined;
+    const render = () => (el.innerHTML = frame(Math.min(f, LAST)));
+    const tick = () => { f = f >= LAST + 3 ? 0 : f + 1; render(); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 1100); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused on the learned loop exit.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { f = 7 * 2 + 1; render(); pause(); }
+    else { render(); play(); }
+  });
+</script>

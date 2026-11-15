@@ -1,0 +1,28 @@
+---
+// A labelled box holding a static ASCII diagram, e.g.
+//   <AsciiBox label="flow" art={`a ──▶ b`} caption="optional caption" />
+interface Props {
+  label: string;
+  art: string;
+  caption?: string;
+}
+const { label, art, caption } = Astro.props;
+// Escape HTML, then let **text** mark highlighted (yellow) parts of the art.
+const html = art
+  .replace(/^\n+|\s+$/g, "")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/\*\*(.+?)\*\*/g, '<b class="hl">$1</b>');
+---
+
+<section class="box asciibox">
+  <div class="label">[ <b>{label}</b> ]</div>
+  <pre aria-label={caption ?? label} set:html={html} />
+  {caption && <p class="cap">{caption}</p>}
+</section>
+
+<style>
+  .asciibox { margin: 28px 0; }
+  .asciibox pre { margin: 0 0 14px; font: 13px/1.5 var(--mono); color: var(--ink); overflow-x: auto; border: 0; padding: 0; background: none; }
+  .asciibox :global(.hl) { color: var(--accent); font-weight: 500; }
+  .asciibox .cap { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>

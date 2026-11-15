@@ -12,7 +12,7 @@ interface Props {
   project: Project;
 }
 const { project } = Astro.props;
-const { title, date, course, summary, dek, image, hideImage, imageCaption, tags, stack, links = {} } = project.data;
+const { title, date, course, summary, dek, image, hideImage, imageWide, imageCaption, tags, stack, links = {} } = project.data;
 const { Content } = await render(project);
 
 // A YouTube link replaces the image with an embedded video, like the old site.
@@ -57,7 +57,7 @@ const LINK_LABELS: Record<string, string> = {
       ) : (
         image &&
         !hideImage && (
-          <figure>
+          <figure class={imageWide ? "wide" : undefined}>
             <a class="zoom" href={image} target="_blank" rel="noopener" title="Open full size">
               <img src={image} alt={title} loading="lazy" />
             </a>

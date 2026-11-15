@@ -3,39 +3,83 @@ title: "Out-of-Order RISC-V Processor"
 date: "Fall 2025"
 course: "UIUC ECE 411"
 sort: 2025.9
-summary: "High-performance out-of-order microprocessor implementing RV32IM with dynamic scheduling, register renaming, and speculative execution"
-dek: "An out-of-order (OoO) processor implementing the RV32IM instruction set architecture in SystemVerilog. This 8-week capstone project for UIUC's [ECE 411: Computer Organization & Design](https://courses.grainger.illinois.edu/ece411/fa2025/syllabus.html) demonstrates advanced computer architecture concepts including dynamic instruction scheduling, register renaming, and speculative execution."
+summary: "A 2-way superscalar, out-of-order RV32IM core in SystemVerilog with register renaming, a Gshare branch predictor, and a split load-store queue."
+dek: "For UIUC's ECE 411 (Computer Organization & Design), my team designed a 2-way superscalar, out-of-order RISC-V processor in SystemVerilog over eight weeks. I worked across most of the core, and built the Gshare branch predictor and most of the load-store queue."
 image: "/images/mp_ooo_diagram.png"
-tags: ["SystemVerilog","RISC-V","Computer Architecture"]
-stack: ["SystemVerilog","RISC-V","Computer Architecture","Out-of-Order Execution"]
+imageWide: true
+tags: ["SystemVerilog", "RISC-V", "Computer Architecture"]
+stack: ["SystemVerilog", "RISC-V (RV32IM)", "Synopsys VCS", "Verilator", "Spike", "Verdi", "SpyGlass", "Design Compiler", "OpenRAM"]
 links:
   report: "/documents/mp_ooo_final_report.pdf"
-  course: "https://courses.grainger.illinois.edu/ece411/fa2025/syllabus.html"
 featured: true
 ---
 
 import PipelineDiagram from "../../components/PipelineDiagram.astro";
+import AsciiBox from "../../components/AsciiBox.astro";
+import GshareDiagram from "../../components/GshareDiagram.astro";
 
 ## Overview
 
-The goal of this project was to design and implement a high-performance out-of-order processor that maximizes instruction-level parallelism (ILP) while maintaining correct program semantics. Out-of-order execution allows the processor to dynamically reorder instructions to avoid stalls and keep execution units busy, significantly improving performance over in-order designs. The key challenges included managing data dependencies, handling precise exceptions, and implementing efficient speculation and recovery mechanisms.
+Our core implements the full RV32IM instruction set, including multiply and divide. It executes instructions out of order to avoid stalls and keep the execution units busy, while still committing them in program order so exceptions stay precise.
 
-We implemented an Explicit Register Renaming (ERR) architecture using a Reorder Buffer (ROB) for tracking in-flight instructions and maintaining precise exception semantics. The design features a reservation station-based execution model that allows instructions to wait for their operands while freeing up pipeline resources. Our processor implements the full RV32IM instruction set, including integer multiplication and division operations.
-
-The processor includes several advanced features for high performance. We implemented a 2-way superscalar design that can fetch, decode, dispatch, and retire up to two instructions per cycle. The memory subsystem features split instruction and data caches with a bus arbiter for efficient memory access, and both caches are fully pipelined to minimize latency. To improve instruction fetch throughput, we added next-line prefetching that predicts sequential instruction access patterns. For branch handling, we integrated a Gshare branch predictor that uses a global history register combined with branch address hashing to achieve high prediction accuracy. The memory execution unit uses a split load-store queue architecture that allows loads and stores to be scheduled independently while maintaining memory ordering constraints.
-
-Key technical challenges included maintaining correct program order despite out-of-order execution, which required coordination between the ROB, reservation stations, and execution units to ensure instructions retire in order even when they complete out of order. We had to balance competing tradeoffs between power, performance (IPC), area, and timing delay throughout the design. For example, increasing superscalar width improves IPC but increases area and power consumption, while deeper pipelines can improve clock frequency but add complexity to forwarding paths and hazard detection. Through this process, we discovered that not all advanced features work well together—some combinations provided diminishing returns or introduced new bottlenecks that negated their individual benefits.
-
-Instructions can finish out of order, but they always commit in order. Here's a simplified illustration:
+It uses explicit register renaming with a reorder buffer (ROB) to track in-flight instructions, and reservation stations that let instructions wait for their operands without holding up the rest of the pipeline. Here's a simplified look at how instructions finish out of order but commit in order:
 
 <PipelineDiagram />
 
-## Advanced Features
+## Design
 
-- **2-Way Superscalar Design:** Can fetch, decode, dispatch, and retire up to two instructions per cycle, significantly improving instruction throughput
-- **Split Instruction and Data Caches:** Features separate L1 caches with a bus arbiter for efficient memory access, with both caches fully pipelined to minimize latency
-- **Next-Line Prefetching:** Predicts sequential instruction access patterns to improve instruction fetch throughput and reduce cache misses
-- **Gshare Branch Predictor:** Uses a global history register combined with branch address hashing to achieve high prediction accuracy and minimize pipeline flushes
-- **Split Load-Store Queue:** Allows loads and stores to be scheduled independently while maintaining memory ordering constraints for correct program execution
-- **Explicit Register Renaming (ERR):** Uses a Reorder Buffer (ROB) for tracking in-flight instructions and maintaining precise exception semantics
-- **Reservation Station Execution Model:** Enables instructions to wait for operands while freeing up pipeline resources, maximizing instruction-level parallelism
+<p class="key">I was involved in most phases of the core. <span class="mine">✦ highlighted</span> = parts I led.</p>
+
+### Core
+
+- **2-way superscalar:** fetches, decodes, dispatches, and retires up to two instructions per cycle
+- **Explicit register renaming** with a reorder buffer for in-order commit and precise exceptions
+- **Reservation stations** so instructions wait for operands without stalling the pipeline
+
+### Front end
+
+- <strong class="mine">Gshare branch predictor</strong> that hashes global branch history with the branch address
+- **Next-line prefetching** for sequential instruction fetches
+
+<GshareDiagram />
+
+### Memory
+
+- **Pipelined instruction and data caches** (split L1 I-cache and D-cache), sharing memory through a bus arbiter
+- <strong class="mine">Split load-store queue</strong> so loads and stores schedule independently while keeping memory order correct
+
+> Every feature was a trade-off between performance (IPC), power, area, and timing. Going 2-wide superscalar is a good example: it didn't buy us much performance, but we wanted to learn how to build one, so we did it anyway, knowing it wasn't the most efficient choice.
+
+## Tools and verification
+
+Every instruction the core commits is checked against Spike, the official RISC-V reference simulator. If the PC, registers, or memory ever differ, the testbench flags a mismatch, which is what makes it possible to debug a core that runs instructions out of order.
+
+<AsciiBox
+  label="flow"
+  caption="every stage runs on the same RTL"
+  art={`
+ **simulate**
+   C / asm ──[ RISC-V GCC ]──▶ program
+   RTL + program ──[ VCS / Verilator ]──▶ IPC · cycles · branch accuracy
+                   └──▶ every commit checked against Spike
+
+ **lint**
+   RTL ──[ SpyGlass ]──▶ lint clean
+
+ **synthesize**
+   RTL ──[ Design Compiler + OpenRAM ]──▶ timing · area
+   + switching activity from sim ───────▶ power
+`}
+/>
+
+- **Simulation:** Synopsys VCS as the main simulator, Verilator as a free alternative, and Verdi for waveforms
+- **Programs:** RISC-V GCC builds the test programs, including CoreMark, which reports IPC, cycles, and branch accuracy
+- **Lint:** SpyGlass, which has to come back clean
+- **Synthesis:** Design Compiler maps the RTL to gates and reports timing and area, with OpenRAM generating the SRAMs and DesignWare providing the multiplier and divider
+- **Power:** switching activity from simulation is fed back into Design Compiler to estimate power
+
+## Takeaways
+
+This project was a struggle. We were in a constant time crunch, and debugging an out-of-order core was tedious. The class ended with a design competition, and our core didn't even make the leaderboard: it deadlocked on some of the tests because of a superscalar bug where one of the two ways could accidentally drop an instruction.
+
+It wasn't the result we wanted, but it pushed me to grow a lot as an RTL engineer. My stronger suit had always been C++, and I didn't always have a clear picture of how my RTL would synthesize into gates. Building that intuition was one of the coolest parts of the project. Plenty of my habits didn't translate to hardware at first: for example, I reset every flip-flop on a pipeline flush, when clearing a valid bit and clock-gating the rest would have done the same job for much less power. RTL is also much slower to iterate on than software, which makes every bug more expensive.

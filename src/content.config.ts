@@ -15,6 +15,7 @@ const projects = defineCollection({
     dek: z.string().optional(), // intro paragraph on the project page; [text](url) links allowed
     image: z.string().optional(),
     hideImage: z.boolean().default(false),
+    imageWide: z.boolean().default(false), // let a wide diagram extend past the text column
     imageCaption: z.string().optional(),
     tags: z.array(z.string()).default([]),
     stack: z.array(z.string()).optional(),
