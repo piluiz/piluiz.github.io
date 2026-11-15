@@ -92,12 +92,19 @@ _/__|_\_
           root.setAttribute("data-theme", next);
           try { localStorage.setItem("theme", next); } catch {}
           syncToggle();
+          drawStars(); // stars at night, clouds during the day
         }),
       );
       syncToggle();
 
       // ---- ascii stars in the side margins ----
       const GLYPHS = ["*", "+", ".", "·", "'", "✦", "⋆", "*", "."];
+      // weather-icon style clouds (like wttr.in)
+      const CLOUDS = [
+        "    .--.\n .-(    ).\n(___.__)__)",
+        "  .-.\n (   ).\n(___(__)",
+        "   .--.\n .(    )-.\n(__(__.___)",
+      ];
       function drawStars() {
         const sky = document.querySelector<HTMLElement>(".sky");
         if (!sky) return;
@@ -114,6 +121,36 @@ _/__|_\_
         far.dataset.speed = "0.45";
         near.dataset.speed = "0.2";
         sky.append(far, near);
+
+        // light mode: clouds and a few birds instead of stars
+        if (root.getAttribute("data-theme") === "light") {
+          if (gutter < 140) { onScroll(); return; }
+          const clouds = Math.round(H / 170);
+          for (let i = 0; i < clouds; i++) {
+            const c = document.createElement("span");
+            c.className = "cloud";
+            c.textContent = CLOUDS[Math.floor(rnd() * CLOUDS.length)];
+            c.style.top = Math.round(rnd() * (H - 80) + 20) + "px";
+            c.style[rnd() < 0.5 ? "left" : "right"] = Math.round(16 + rnd() * (gutter - 120)) + "px";
+            c.style.setProperty("--dur", (24 + rnd() * 24).toFixed(0) + "s");
+            c.style.setProperty("--delay", (-rnd() * 40).toFixed(0) + "s");
+            c.style.setProperty("--fade", (14 + rnd() * 14).toFixed(0) + "s");
+            c.style.setProperty("--fade-delay", (-rnd() * 28).toFixed(0) + "s");
+            (rnd() < 0.5 ? far : near).appendChild(c);
+          }
+          const birds = Math.round(H / 420);
+          for (let i = 0; i < birds; i++) {
+            const b = document.createElement("span");
+            b.className = "bird";
+            b.textContent = rnd() < 0.5 ? "v" : "v  v";
+            b.style.top = Math.round(rnd() * (H - 40) + 20) + "px";
+            b.style[rnd() < 0.5 ? "left" : "right"] = Math.round(24 + rnd() * (gutter - 80)) + "px";
+            near.appendChild(b);
+          }
+          onScroll();
+          return;
+        }
+
         const count = Math.round(H / 48);
         for (let i = 0; i < count; i++) {
           const s = document.createElement("span");

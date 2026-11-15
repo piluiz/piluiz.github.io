@@ -207,6 +207,21 @@ footer.site a:hover { color: var(--accent); }
 .sky span.y { color: var(--accent); opacity: .55; }
 .sky span.tw { animation: twinkle var(--dur, 4s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
 @keyframes twinkle { 0%, 100% { opacity: .12; } 50% { opacity: .95; } }
+/* light mode: clouds drifting sideways + a few birds */
+.sky span.cloud {
+  white-space: pre; font: 13px/1.15 var(--mono); color: var(--muted);
+  animation:
+    drift var(--dur, 36s) ease-in-out var(--delay, 0s) infinite alternate,
+    fade var(--fade, 20s) ease-in-out var(--fade-delay, 0s) infinite;
+}
+.sky span.bird { font: 11px/1 var(--mono); color: var(--muted); opacity: .7; white-space: pre; }
+@keyframes drift { from { transform: translateX(-18px); } to { transform: translateX(18px); } }
+/* fade in, linger, fade out, stay gone briefly */
+@keyframes fade { 0%, 100% { opacity: 0; } 15%, 70% { opacity: .75; } 85% { opacity: 0; } }
+/* with Reduce Motion: no drifting, but the gentle fade stays (like the star twinkle) */
+@media (prefers-reduced-motion: reduce) {
+  .sky span.cloud { animation: fade var(--fade, 20s) ease-in-out var(--fade-delay, 0s) infinite; }
+}
 @media (max-width: 900px) { .sky { display: none; } }
 
 /* ---------- scroll-progress road ---------- */
