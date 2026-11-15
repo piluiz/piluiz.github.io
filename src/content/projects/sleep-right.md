@@ -1,6 +1,7 @@
 ---
 title: "Sleep Right"
 date: "Spring 2023"
+course: "USC EE 459"
 sort: 2023.3
 summary: "A prototype smart wearable that wakes you during your optimal sleep stage."
 dek: "Sleep Right is a prototype for a smart wearable device designed to improve sleep quality by waking users during their optimal sleep stage. This was my electrical engineering senior design capstone project for USC's [EE 459Lx Embedded Systems Design Laboratory](https://ece-classes.usc.edu/ee459/)."

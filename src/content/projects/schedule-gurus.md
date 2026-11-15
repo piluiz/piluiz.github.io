@@ -1,6 +1,7 @@
 ---
 title: "Schedule Gurus"
 date: "Fall 2020"
+course: "USC CSCI 201"
 sort: 2020.9
 summary: "Schedule Gurus is a full-stack web application that takes a user's list of desired classes and generates functional schedules with no conflicting times."
 dek: "Schedule Gurus is a full-stack web application that takes a user's list of desired classes and generates functional schedules with no conflicting times. This was my group's final project for USC's CSCI 201: Principles of Software Development, built by a team of 6 students."

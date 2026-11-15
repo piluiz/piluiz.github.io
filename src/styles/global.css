@@ -35,7 +35,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 400 17.5px/1.7 var(--body);
+  font: 400 16.5px/1.7 var(--body);
   position: relative;
   overflow-x: hidden;
   padding-bottom: 56px; /* room for the road */
@@ -156,14 +156,17 @@ details.xp li::before { content: "*"; position: absolute; left: 0; color: var(--
 /* ---------- project page ---------- */
 article .meta { font: 13px var(--mono); color: var(--muted); margin-bottom: 24px; }
 article .meta .tag { color: var(--ink); }
+article .meta .course { color: var(--accent); }
 article .dek { font-size: 17px; color: var(--muted); margin: 0 0 8px; }
 article .dek a, .prose a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 article figure { margin: 32px 0; }
 article figure img {
-  width: 100%; max-height: 480px; object-fit: contain; display: block;
+  width: auto; max-width: 100%; max-height: 560px; display: block; margin: 0 auto; padding: 12px;
   background: var(--img-bg); border: 1px solid var(--rule);
 }
-article figcaption { font: 13px var(--mono); color: var(--muted); margin-top: 8px; }
+article figcaption { font: 13px var(--mono); color: var(--muted); margin-top: 8px; text-align: center; }
+article figure a.zoom { display: block; cursor: zoom-in; }
+article figure .hint { font: 12px var(--mono); color: var(--faint); text-align: center; margin-top: 6px; }
 .video { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--rule); }
 .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
@@ -182,7 +185,22 @@ article figcaption { font: 13px var(--mono); color: var(--muted); margin-top: 8p
 .prose code { font: 14.5px var(--mono); background: var(--soft); border: 1px solid var(--rule); padding: 1px 5px; }
 .prose pre { font: 14px/1.6 var(--mono); padding: 16px; overflow-x: auto; border: 1px solid var(--rule); }
 .prose pre code { background: none; border: 0; padding: 0; }
-.prose blockquote { margin: 24px 0; padding: 4px 18px; border-left: 3px solid var(--accent); color: var(--muted); }
+.prose table { width: 100%; border-collapse: collapse; margin: 20px 0 24px; font: 13.5px/1.5 var(--mono); }
+.prose th, .prose td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+.prose th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: lowercase; }
+.prose td:first-child { color: var(--muted); }
+.prose td strong { color: var(--accent); font-weight: 500; }
+.prose table { display: block; overflow-x: auto; }
+/* A Markdown blockquote ("> ...") becomes a personal note, styled like a code comment */
+.prose blockquote {
+  margin: 28px 0; padding: 12px 18px 2px; border-left: 2px solid var(--accent);
+  background: var(--soft); color: var(--ink); font-style: italic;
+}
+.prose blockquote::before {
+  content: "// note"; display: block; margin-bottom: 6px;
+  font: normal 12px var(--mono); color: var(--accent); letter-spacing: .02em;
+}
+.prose blockquote p { margin-bottom: 10px; }
 
 .stack { font: 13px var(--mono); color: var(--muted); text-transform: lowercase; }
 .linkbox { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 14px var(--mono); padding-bottom: 14px; }
@@ -236,7 +254,7 @@ footer.site a:hover { color: var(--accent); }
 
 /* ---------- small screens ---------- */
 @media (max-width: 560px) {
-  body { font-size: 16.5px; }
+  body { font-size: 16px; }
   .page-title { font-size: 27px; }
   .row { grid-template-columns: 1fr; gap: 0; }
   a.row .t::before { display: none; }

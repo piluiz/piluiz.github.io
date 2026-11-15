@@ -1,6 +1,7 @@
 ---
 title: "USCC – University Simple C Compiler"
 date: "Spring 2022"
+course: "USC ITP 439"
 sort: 2022.3
 summary: "A simple C compiler built using LLVM for educational purposes"
 dek: "USCC (University Simple C Compiler) is a complete compiler for the University Simple C language, a subset of Standard C. Built as part of USC's [ITP 439 Compiler Design](https://itp439-20231.github.io/USCC.html) course, this project implements all major compiler phases from lexical analysis to LLVM IR generation."

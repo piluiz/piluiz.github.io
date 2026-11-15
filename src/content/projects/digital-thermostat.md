@@ -1,6 +1,7 @@
 ---
 title: "Digital Thermostat System"
 date: "Fall 2020"
+course: "USC EE 109"
 sort: 2020.9
 summary: "Temperature control system with LCD interface, rotary encoder threshold adjustment, automatic climate control, and non-volatile memory persistence"
 dek: "A fully functional temperature control system built with Arduino in C. This was my final project for USC's EE 109: Introduction to Embedded Systems course. Features real-time temperature monitoring, user-configurable thresholds with rotary encoder interface, automatic heating/cooling control through LEDs, LCD display, and EEPROM persistence for settings."

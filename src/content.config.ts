@@ -9,6 +9,7 @@ const projects = defineCollection({
   schema: z.object({
     title: z.string(),
     date: z.string(), // shown as-is, e.g. "Fall 2025"
+    course: z.string().optional(), // e.g. "UIUC ECE 408", shown next to the date
     sort: z.number(), // for ordering: year + .3 spring / .6 summer / .9 fall
     summary: z.string(), // one line for lists
     dek: z.string().optional(), // intro paragraph on the project page; [text](url) links allowed

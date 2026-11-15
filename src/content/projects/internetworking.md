@@ -1,6 +1,7 @@
 ---
 title: "353NET: Link-State Routing Protocol"
 date: "Spring 2022"
+course: "USC CSCI 353"
 sort: 2022.3
 summary: "Peer-to-peer network routing system implementing link-state protocol with autonomous neighbor discovery, topology flooding, and multi-threaded connection management"
 dek: "Implemented a complete peer-to-peer network routing system in C++ that simulates how Internet routers discover topology and communicate. Built as part of USC's CSCI 353: Introduction to Internetworking, this project implements a custom link-state routing protocol (similar to OSPF) to enable distributed nodes to automatically discover neighbors, share network topology, and build a complete graph of the network without central coordination."

@@ -1,0 +1,61 @@
+---
+title: "GPU-Accelerated GPT-2 Inference"
+date: "Fall 2025"
+course: "UIUC ECE 408"
+sort: 2025.9
+summary: "GPT-2 inference kernels written from scratch in CUDA, then optimized with tiling, Tensor Cores, Flash Attention, and KV caching."
+dek: "My team built GPT-2 inference in CUDA for UIUC's ECE 408, then profiled and optimized every kernel on NCSA's A40 GPUs. My main contribution was the KV cache, which made token generation 2.5× faster."
+image: "/images/Full_GPT_architecture.png"
+tags: ["CUDA", "C++", "Machine Learning"]
+stack: ["CUDA", "C++", "cuBLAS", "CUTLASS", "Nsight Systems", "Nsight Compute"]
+links:
+  report: "/documents/ECE408_Milestone_3_Report.pdf"
+featured: true
+---
+
+import TiledMatmul from "../../components/TiledMatmul.astro";
+
+## Overview
+
+We implemented GPT-2 inference on the GPU, writing a CUDA kernel for every operation in the forward pass. That includes multi-head attention, along with the matrix multiplications, layer normalization, and feed-forward layers around it.
+
+Over several milestones, we implemented a wide range of kernel optimizations and profiled each one with Nsight Systems and Nsight Compute to find the bottlenecks and decide what to try next.
+
+> The most interesting part was finding combinations that worked well together. Some optimizations complement each other, while others overlap or cancel out each other's gains, so the fastest version wasn't just every optimization stacked together.
+
+## My part: the KV cache
+
+GPT-2 generates text one token at a time. Without a cache, every new token recomputes the keys and values for the whole sequence so far. The KV cache stores them instead: each of the 12 layers keeps its K and V in a buffer laid out as `(layer, batch, head, max_seq_len, head_dim)`, and each new token just appends its own.
+
+That changes the shape of the work. Each step processes a single token (T = 1) instead of the full sequence, so attention becomes one query row against the cached keys. That let us write specialized single-query attention kernels and drop causal masking entirely, since every cached token is already in the past.
+
+| | Baseline | KV cache | |
+|---|---|---|---|
+| Per-token latency | 20.8 ms | 8.4 ms | **2.49× faster** |
+| Throughput | 48 tokens/s | 120 tokens/s | **2.49× faster** |
+| Total kernel time | 139.1 ms | 57.6 ms | **2.42× faster** |
+
+> Two results surprised me. Kernel launches went *up* 5.8× (171 → 984), because generation now runs every layer once per token, but each call got so much cheaper (matmul went from 3.15 ms to 0.17 ms per call) that total time still dropped. And achieved occupancy fell from 72% to 16%, which was fine: decoding one token at a time is limited by memory bandwidth, not thread count. Each step streams the weights and the cache through the GPU while doing very little math.
+
+## Other optimizations
+
+### Matrix multiplication
+
+<TiledMatmul />
+
+- **Register and shared-memory tiling** to reuse data and cut memory traffic
+- **Tensor Cores (TF32)** for faster matrix math on Ampere and newer GPUs
+- **Split-K decomposition** to split GEMMs along K for more parallelism
+- **cuBLAS and CUTLASS** for highly tuned GEMMs on Tensor Cores
+
+### Attention
+
+- **Flash Attention** with IO-aware tiling to avoid materializing the full attention matrix
+- **Windowed (local) attention** to limit the quadratic cost on long sequences
+
+### Everything else
+
+- **Faster reductions** for parallel sums across thread blocks
+- **Constant memory** for small, frequently read data
+- **`__restrict__`** pointers so the compiler can optimize more aggressively
+- **Configuration sweeps** over block sizes, thread counts, and loop unrolling

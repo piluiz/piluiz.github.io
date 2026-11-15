@@ -1,0 +1,82 @@
+---
+// Animated ASCII diagram of tiled matrix multiplication (C = A x B).
+// For each output tile C[i][j], step k loads tile A[i][k] and tile B[k][j]
+// into shared memory and accumulates into C[i][j]. Used in gpt2-inference.mdx.
+---
+
+<section class="box tiling">
+  <div class="label">[ <b>tiling.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated diagram of tiled matrix multiplication: tiles of A and B are loaded into shared memory to build each tile of C"></pre>
+  <p class="note">
+    <span class="hot">██</span> tiles in shared memory · <span class="sweep">░░</span> the row/column being swept ·
+    <span class="done">██</span> finished output tiles<br />
+    Each value loaded from global memory gets reused by every thread in the tile.
+  </p>
+</section>
+
+<style>
+  .tiling { margin: 28px 0; }
+  .tiling pre { margin: 0 0 12px; font: 13px/1.45 var(--mono); overflow-x: auto; color: var(--faint); border: 0; padding: 0; }
+  .tiling :global(.hot) { color: var(--accent); }
+  .tiling :global(.sweep) { color: var(--muted); }
+  .tiling :global(.done) { color: var(--ink); opacity: .55; }
+  .tiling :global(.lbl) { color: var(--ink); }
+  .tiling :global(.eq) { color: var(--muted); }
+  .tiling .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .tiling .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>
+
+<script>
+  const N = 3; // tiles per side
+  const SHADE = ["░░", "▒▒", "▓▓"]; // C tile filling up as k advances
+
+  function frame(step: number): string {
+    const total = N * N * N;
+    const s = Math.min(step, total - 1);
+    const tile = Math.floor(s / N);
+    const i = Math.floor(tile / N), j = tile % N, k = s % N;
+    const finished = step >= total;
+
+    const a = (r: number, c: number) =>
+      finished ? "··" : r === i && c === k ? '<span class="hot">██</span>' : r === i ? '<span class="sweep">░░</span>' : "··";
+    const b = (r: number, c: number) =>
+      finished ? "··" : r === k && c === j ? '<span class="hot">██</span>' : c === j ? '<span class="sweep">░░</span>' : "··";
+    const cc = (r: number, c: number) => {
+      const idx = r * N + c;
+      if (finished || idx < tile) return '<span class="done">██</span>';
+      if (idx === tile) return `<span class="hot">${SHADE[k]}</span>`;
+      return "··";
+    };
+
+    const pad = "   ";
+    let out = `<span class="lbl">    A${" ".repeat(N * 3 - 1)}${pad}  B${" ".repeat(N * 3 - 1)}${pad}  C</span>\n`;
+    for (let r = 0; r < N; r++) {
+      const row = (f: (r: number, c: number) => string) => Array.from({ length: N }, (_, c) => f(r, c)).join(" ");
+      const op1 = r === Math.floor(N / 2) ? " × " : pad;
+      const op2 = r === Math.floor(N / 2) ? " = " : pad;
+      out += `  ${row(a)}${op1}  ${row(b)}${op2}  ${row(cc)}\n`;
+    }
+    out += finished
+      ? `\n<span class="eq">  done: every tile of C computed</span>`
+      : `\n<span class="eq">  C[${i}][${j}] += A[${i}][${k}] · B[${k}][${j}]    k = ${k + 1}/${N}</span>`;
+    return out;
+  }
+
+  document.querySelectorAll<HTMLElement>(".tiling").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    const LAST = N * N * N + 3; // hold the finished frame briefly
+    let t = 0;
+    let timer: number | undefined;
+    const render = () => (el.innerHTML = frame(t));
+    const tick = () => { t = t >= LAST ? 0 : t + 1; render(); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 420); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused mid-computation.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { t = 13; render(); pause(); }
+    else { render(); play(); }
+  });
+</script>

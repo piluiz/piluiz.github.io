@@ -1,6 +1,7 @@
 ---
 title: "Sindoku: FPGA Sudoku Game"
 date: "Spring 2021"
+course: "USC EE 354"
 sort: 2021.3
 summary: "Sindoku is a hardware-based Sudoku game implemented on FPGA using Verilog."
 dek: "Sindoku is a hardware-based Sudoku game implemented on FPGA using Verilog. This was my final project for USC's [EE354: Introduction to Digital Circuits course](https://web-app.usc.edu/soc/syllabus/20221/30978.pdf), demonstrating digital logic design and FPGA programming skills."
