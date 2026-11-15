@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample D — Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Luckiest+Guy&family=Questrial&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  /* Dark is the default look; the [ light ] toggle switches tokens. */
+  :root, :root[data-theme="dark"] {
+    --bg: #0c0c0d; --ink: #efede8; --muted: #aaa69f; --faint: #57554f; --rule: #2a2927;
+    --accent: #fcdd9d; /* butter yellow, from the old site */
+    --accent-2: var(--ink);
+    --soft: #161615;
+  }
+  :root[data-theme="light"] {
+    --bg: #faf8f3; --ink: #1d1c1a; --muted: #6d6961; --faint: #b5b0a5; --rule: #dcd6ca;
+    --accent: #8a5a00; /* butter yellow is unreadable on cream, so light mode uses a deep honey */
+    --accent-2: var(--ink); --soft: #f1ede4;
+  }
+  /* font options (sample-only switcher): serif for reading, IBM Plex Mono for labels/dates/nav */
+  :root { --mono: "IBM Plex Mono", ui-monospace, monospace; --body: "IBM Plex Serif", Georgia, serif; --body-size: 17.5px; --body-lh: 1.7; --title-w: 500; }
+  :root { --display: var(--body); --display-w: 500; --display-ls: -0.02em; }
+  :root[data-display="luckiest"] { --display: "Luckiest Guy", var(--body); --display-w: 400; --display-ls: 0.04em; }
+  :root[data-text="questrial"] { --body: "Questrial", system-ui, sans-serif; --body-size: 16.5px; --body-lh: 1.7; --title-w: 400; }
+  :root[data-text="questrial"] .row .t { letter-spacing: .01em; }
+  :root[data-text="questrial"] .intro b, :root[data-text="questrial"] article li b { font-weight: 400; }
+  :root[data-font="plexserif"] { --body: "IBM Plex Serif", Georgia, serif; --body-size: 17.5px; --body-lh: 1.7; --title-w: 500; }
+  :root[data-font="source"] { --body: "Source Serif 4", Georgia, serif; --body-size: 18px; --title-w: 600; }
+  :root[data-font="literata"] { --body: "Literata", Georgia, serif; --body-size: 17.5px; --body-lh: 1.7; --title-w: 600; }
+  :root[data-font="fraunces"] { --body: "Fraunces", Georgia, serif; --body-size: 18px; --title-w: 600; }
+  :root[data-font="garamond"] { --body: "EB Garamond", Georgia, serif; --body-size: 20.5px; --body-lh: 1.6; --title-w: 500; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); position: relative; overflow-x: hidden;
+         font: 400 var(--body-size)/var(--body-lh) var(--body); }
+  .mono, pre, code, nav, .label, .d, .tags, .meta, footer, .prompt, .links, .crumb, .sample-bar { font-family: var(--mono) !important; }
+  .row .t, article h1 { font-family: var(--body); font-weight: var(--title-w) !important; }
+  .fontpick button { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 3px; }
+  .fontpick button.on { color: var(--accent); }
+
+  /* ascii stars in the side margins */
+  .sky { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .sky .layer { position: absolute; inset: 0; will-change: transform; }
+  .sky span { position: absolute; font: 14px/1 var(--mono); color: var(--faint); user-select: none; }
+  .sky span.y { color: var(--accent); opacity: .55; }
+  .sky span.tw { animation: twinkle var(--dur, 4s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
+  @keyframes twinkle { 0%, 100% { opacity: .12; } 50% { opacity: .95; } }
+  .wrap, .sample-bar, .divider, .divider-label { position: relative; z-index: 1; }
+  @media (max-width: 900px) { .sky { display: none; } }
+  a { color: inherit; }
+  ::selection { background: var(--accent); color: var(--bg); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+
+  .sample-bar { font: 12px/1 "IBM Plex Mono", monospace; color: var(--muted); padding: 10px 16px; text-align: center; border-bottom: 1px dashed var(--rule); }
+  .sample-bar a { margin: 0 6px; color: var(--accent); }
+
+  /* nav */
+  header.site { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 0; font-size: 14px; border-bottom: 1px solid var(--rule); }
+  header.site .home b { color: var(--accent) !important; }
+
+  /* hero layouts (sample-only switcher) */
+  .hero { margin: 56px 0 0; }
+  .hero .titlebar { display: none; }
+  .hero .tagline { font: 13px var(--mono); color: var(--muted); letter-spacing: .04em; text-align: center; margin: -22px 0 36px; }
+  .hero .tagline span { color: var(--faint); margin: 0 8px; }
+  /* centered: everything shares one center axis */
+  :root:not([data-header]) .intro, :root[data-header="center"] .intro { text-align: center; }
+  :root:not([data-header]) .intro p:not(.prompt), :root[data-header="center"] .intro p:not(.prompt) { max-width: 33em; margin-left: auto; margin-right: auto; }
+  :root:not([data-header]) .links a, :root[data-header="center"] .links a { margin: 0 7px; }
+  :root:not([data-header]) .prompt, :root[data-header="center"] .prompt { display: none; }
+  /* left-aligned: banner and text share the left edge */
+  :root[data-header="left"] .banner { margin-left: 0; }
+  :root[data-header="left"] .tagline { text-align: left; margin-top: -24px; }
+  /* terminal window: the intro is framed like a window */
+  :root[data-header="window"] .hero { border: 1px solid var(--rule); }
+  :root[data-header="window"] .hero .titlebar { display: flex; justify-content: space-between; font: 12px var(--mono); color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--rule); background: var(--soft); }
+  :root[data-header="window"] .hero .titlebar i { font-style: normal; color: var(--faint); letter-spacing: 3px; }
+  :root[data-header="window"] .hero .titlebar i b { color: var(--accent); font-weight: 400; }
+  :root[data-header="window"] .hero .inner { padding: 8px 28px 20px; }
+  :root[data-header="window"] .banner { margin-top: 36px; }
+  /* framed: the "before" layout inside a plain labelled box, same as the sections below */
+  :root[data-header="framed"] .hero { border: 1px solid var(--rule); position: relative; margin-top: 48px; }
+  :root[data-header="framed"] .hero .inner { padding: 4px 28px 20px; }
+  :root[data-header="framed"] .hero::before { content: "[ ~/pilar ]"; position: absolute; top: -0.75em; left: 14px; background: var(--bg); padding: 0 8px; font: 13px/1.5 var(--mono); color: var(--muted); }
+  :root[data-header="framed"] .banner { margin-top: 40px; }
+  :root[data-header="framed"] .tagline { display: none; }
+  /* before: what you saw last time */
+  :root[data-header="old"] .tagline { display: none; }
+  :root[data-header="old"] header.site { border-bottom: 0; padding: 24px 0; }
+  :root[data-header="old"] header.site .home b { color: var(--ink) !important; }
+  :root[data-header="old"] .hero { margin-top: 0; }
+  header.site .home .ps { color: var(--faint); }
+  header.site .home .cmt { white-space: pre; color: var(--faint); opacity: 0; transition: opacity .25s; }
+  header.site .home:hover .cmt, header.site .home:focus-visible .cmt { opacity: 1; }
+  header.site .home .logo-star { display: inline-block; font-size: 1.25em; line-height: 1; transition: transform .5s ease; }
+  header.site .home:hover .logo-star { transform: rotate(180deg) scale(1.15); }
+  header.site .home:hover { color: var(--ink); }
+  .hero-top { width: fit-content; max-width: 100%; margin: 48px auto 44px; font: 14px/1.7 var(--mono); color: var(--muted); overflow: hidden; }
+  .hero-top .ln { white-space: pre; min-height: 1.7em; }
+  .hero-top .ln .ps { color: var(--accent); }
+  .hero-top .ln .cmd { color: var(--ink); }
+  .hero-top .ln.out { color: var(--ink); }
+  .hero-top .px { font-family: "IBM Plex Mono", monospace; font-size: clamp(9px, 2.2vw, 14px); line-height: 1; color: var(--accent); white-space: pre; margin: 12px 0 16px; }
+  .hero-top .bigname { font-size: 22px; color: var(--accent); letter-spacing: .02em; }
+  .hero-top .cur { display: inline-block; width: .6em; height: 1.1em; background: var(--accent); vertical-align: -.2em; animation: blink 1.1s steps(1) infinite; }
+  @media (prefers-reduced-motion: reduce) { :root:not([data-motion="on"]) .hero-top .cur { animation: none; } }
+  /* hello, world + std::string line */
+  .hello { text-align: center; margin: 64px auto 44px; }
+  .hello h1 { margin: 0 0 14px; font-family: var(--display); font-weight: var(--display-w); font-size: clamp(38px, 7vw, 56px); line-height: 1.05; letter-spacing: var(--display-ls); color: var(--ink); }
+  :root[data-display="luckiest"] .hello h1 { color: var(--accent); font-size: clamp(40px, 7.5vw, 62px); }
+  .hello.mono h1 { font-family: var(--mono); font-weight: 500; font-size: clamp(30px, 6vw, 46px); letter-spacing: -0.03em; }
+  .hello code { all: unset; font: 15px/1.6 var(--mono); color: var(--muted); white-space: pre-wrap; }
+  .hello .ty { color: var(--muted); } .hello .var { color: var(--ink); } .hello .op { color: var(--faint); } .hello .str { color: var(--accent); }
+  .hello .cur { display: inline-block; width: .55em; height: 1.1em; background: var(--accent); vertical-align: -.2em; margin-left: 3px; animation: blink 1.1s steps(1) infinite; }
+  @media (prefers-reduced-motion: reduce) { :root:not([data-motion="on"]) .hello .cur { animation: none; } }
+  .fontpick2 button { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 3px; }
+  .fontpick2 button.on { color: var(--accent); }
+  .toppick button { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 3px; }
+  .toppick button.on { color: var(--accent); }
+  .namepick button { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 3px; }
+  .namepick button.on { color: var(--accent); }
+  .headpick button { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 3px; }
+  .headpick button.on { color: var(--accent); }
+  header.site .home { text-decoration: none; color: var(--muted); }
+  header.site .home b { color: var(--ink); font-weight: 500; }
+  header.site nav a { text-decoration: none; color: var(--muted); margin-left: 16px; }
+  header.site nav a:hover { color: var(--accent); }
+  header.site nav button { font: inherit; color: var(--muted); background: none; border: 0; cursor: pointer; margin-left: 16px; padding: 0; }
+  header.site nav button:hover { color: var(--accent); }
+
+  /* banner */
+  .banner { color: var(--accent); font-size: clamp(7px, 1.6vw, 11px); line-height: 1.15; margin: 48px 0 40px; white-space: pre; overflow: hidden; width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; }
+  .banner.half { font-family: "IBM Plex Mono", monospace !important; font-size: clamp(9px, 2.2vw, 14px); line-height: 1; letter-spacing: 0; }
+  .banner.led { font-family: "IBM Plex Mono", monospace !important; font-size: clamp(5px, 1.2vw, 8px); line-height: 1.05; letter-spacing: .48em; }
+  .banner.led .off { color: var(--faint); opacity: .45; }
+  .banner.led .on { text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .bannerpick button { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 3px; }
+  .bannerpick button.on { color: var(--accent); }
+  .prompt { font-size: 15px; color: var(--muted); margin: 0 0 10px; }
+  .prompt .ps { color: var(--accent); }
+  .cursor { display: inline-block; width: .6em; height: 1.05em; background: var(--accent); vertical-align: -.15em; margin-left: 2px; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .intro p { margin: 0 0 12px; font-size: 15.5px; line-height: 1.7; }
+  .intro p.links { font-size: 13px; }
+  .hero + .box { margin-top: 88px; }
+  .intro b { font-weight: 500; color: var(--accent); }
+  .links { font: 14px "IBM Plex Mono", monospace; margin-top: 18px; }
+  .links a { color: var(--muted); text-decoration: none; margin-right: 14px; }
+  .links a::before { content: "["; color: var(--faint); }
+  .links a::after { content: "]"; color: var(--faint); }
+  .links a:hover { color: var(--accent); }
+
+  /* bordered sections, labelled like ┌─[ writing ]── */
+  .box { position: relative; border: 1px solid var(--rule); padding: 22px 20px 8px; margin: 52px 0 0; }
+  .box > .label { position: absolute; top: -0.75em; left: 14px; background: var(--bg); padding: 0 8px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .box > .label b { color: var(--accent); font-weight: 500; }
+  .box > .more { position: absolute; bottom: -0.75em; right: 14px; background: var(--bg); padding: 0 8px; font: 13px/1.5 "IBM Plex Mono", monospace; }
+  .box > .more a { color: var(--muted); text-decoration: none; }
+  .box > .more a:hover { color: var(--accent); }
+  /* corner ticks for an ASCII "+" feel */
+  .box::before, .box::after { content: "+"; position: absolute; font: 13px/1 "IBM Plex Mono", monospace; color: var(--faint); background: var(--bg); }
+  .box::before { top: -7px; right: -4px; }
+  .box::after { bottom: -7px; left: -4px; }
+
+  .row { display: grid; grid-template-columns: 76px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid var(--rule); text-decoration: none; }
+  .box > .row:first-of-type, .box > .label + .row { border-top: 0; }
+  .row .d { font-size: 13px; line-height: 1.9; color: var(--muted); }
+  .row .t { display: block; font-weight: 500; }
+  .row .t::before { content: "> "; color: transparent; font-family: "IBM Plex Mono", monospace; transition: color .15s; margin-left: -1.2em; }
+  a.row:hover .t { color: var(--accent); }
+  div.row .t::before { display: none; }
+  a.row:hover .t::before { color: var(--accent); }
+  .row .s { display: block; color: var(--muted); font-size: .9em; line-height: 1.5; }
+  .row .tags { display: block; font-size: 12px; color: var(--faint); margin-top: 4px; }
+
+  /* footer + driving car */
+  footer { margin: 72px 0 32px; font-size: 13px; color: var(--muted); }
+  /* scroll-progress road: the car drives as you scroll and reaches the flag at the bottom */
+  body { padding-bottom: 56px; }
+  .drive { position: fixed; left: 0; right: 0; bottom: 0; height: 44px; z-index: 5; pointer-events: none;
+           background: linear-gradient(to top, var(--bg) 60%, transparent); }
+  .drive .lane { position: absolute; left: 16px; right: 16px; bottom: 9px; border-bottom: 1px dashed var(--faint); }
+  .drive pre { position: absolute; bottom: 10px; margin: 0; font: 9px/1.1 "IBM Plex Mono", monospace; white-space: pre; }
+  .drive .car { left: 16px; color: var(--accent); will-change: transform; }
+  .drive .flag { right: 16px; color: var(--muted); }
+  footer .fine { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  footer a { color: var(--muted); }
+
+  .divider { margin: 100px 0 0; border: 0; border-top: 2px dashed var(--rule); }
+  .divider-label { text-align: center; font: 12px "IBM Plex Mono", monospace; color: var(--muted); margin: 8px 0 0; }
+
+  /* article */
+  .crumb { font-size: 13px; color: var(--muted); margin: 32px 0 0; }
+  .crumb a { color: var(--muted); text-decoration: none; }
+  .crumb a:hover { color: var(--accent); }
+  article h1 { font-size: 28px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; margin: 14px 0 12px; }
+  article .meta { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  article .meta span { color: var(--accent-2); }
+  article .dek { font-size: 19px; color: var(--muted); margin: 0 0 24px; }
+  article h2 { font: 500 17px "IBM Plex Mono", monospace; color: var(--accent); margin: 44px 0 8px; }
+  article h2::before { content: "## "; color: var(--faint); }
+  article a { color: var(--accent); }
+  article figure { margin: 28px 0; }
+  article figure img { width: 100%; display: block; background: #fff; border: 1px solid var(--rule); }
+  article figcaption { font: 13px "IBM Plex Mono", monospace; color: var(--muted); margin-top: 8px; }
+  code { font-size: 14.5px; background: var(--soft); border: 1px solid var(--rule); padding: 1px 5px; }
+  article ul { padding-left: 0; list-style: none; }
+  article li { padding-left: 1.6em; position: relative; margin: 8px 0; }
+  article li::before { content: "*"; position: absolute; left: .3em; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  article li b { font-weight: 500; }
+
+  /* animated pipeline diagram */
+  .pipe { margin-top: 28px; }
+  .pipe pre { margin: 0 0 12px; font-size: 13px; line-height: 1.55; overflow-x: auto; color: var(--muted); }
+  .pipe .hd { color: var(--faint); }
+  .pipe .asm { color: var(--ink); }
+  .pipe .IF, .pipe .ID, .pipe .RN { color: var(--muted); }
+  .pipe .IS { color: var(--ink); }
+  .pipe .EX { color: var(--accent); font-weight: 600; }
+  .pipe .CM { color: var(--bg); background: var(--accent); font-weight: 600; }
+  .pipe .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .pipe .w { color: var(--faint); }
+  .pipe .note { font: 12px/1.6 "IBM Plex Mono", monospace; color: var(--muted); margin: 0 0 6px; }
+
+  @media (max-width: 560px) {
+    body { font-size: 16px; }
+    article h1 { font-size: 27px; }
+    .row { grid-template-columns: 1fr; gap: 0; }
+    .row .t::before { display: none; }
+    header.site nav a, header.site nav button { margin-left: 0; margin-right: 14px; }
+    .box { padding: 22px 14px 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="on"]) .cursor { animation: none; }
+  }
+  .motionpick button { font: inherit; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 3px; }
+  .motionpick button.on { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="sample-bar">Sample D · Terminal — <a href="index.html">all samples</a> <a href="#home">home</a> <a href="#post">writeup</a>
+  <div class="fontpick2" style="margin-top:8px">hello font: <button data-k="display" data-v="serif">plex serif</button> <button data-k="display" data-v="luckiest">luckiest guy (old site)</button> &nbsp;·&nbsp; text font: <button data-k="text" data-v="serif">plex serif</button> <button data-k="text" data-v="questrial">questrial (old site)</button></div>
+  <div class="toppick" style="margin-top:8px">top: <button data-t="hserif">hello world (serif) ★</button> <button data-t="hmono">hello world (mono)</button> <button data-t="name">pixel name</button></div>
+  <div class="namepick" style="margin-top:8px">nav name: <button data-n="cd">cd ~ ★</button> <button data-n="star">✦</button> <button data-n="starname">✦ pilar luiz</button> <button data-n="inc">#include &lt;pilar&gt;</button> <button data-n="sv">pilar.sv</button></div>
+  <div class="headpick" style="margin-top:8px">header: <button data-h="center" class="on">centered</button> <button data-h="left">left-aligned</button></div>
+  <div class="bannerpick" style="margin-top:8px">name: <button data-b="half" class="on">pixel</button> <button data-b="led">led matrix</button> <button data-b="figlet">figlet (old)</button></div>
+  <div class="motionpick" style="margin-top:8px">motion: <button data-m="auto" class="on">follow system setting</button> <button data-m="on">preview animations</button></div></div>
+<div class="drive" aria-hidden="true"><div class="lane"></div><pre class="car">  ____
+_/__|_\_
+'-o--o-'</pre><pre class="flag">|▚▞▚
+|▞▚▞
+|</pre></div>
+<div class="sky" aria-hidden="true"></div>
+
+<div class="wrap" id="home">
+  <header class="site">
+    <a class="home" href="#">~/<b>pilar</b></a>
+    <nav><a href="#">projects</a><a href="#">about</a><button class="theme-toggle" type="button">[light]</button></nav>
+  </header>
+
+<div class="hero">
+  <div class="titlebar"><span>pilar@home: ~</span><i><b>●</b> ● ●</i></div>
+  <div class="inner">
+<div class="hero-top" hidden></div>
+<div class="hello" hidden><h1>Hello, world!</h1><code class="decl"></code></div>
+<pre class="banner" aria-label="pilar luiz">        _  _                 _         _
+ _ __  (_)| |  __ _  _ __   | | _   _ (_) ____
+| '_ \ | || | / _` || '__|  | || | | || ||_  /
+| |_) || || || (_| || |     | || |_| || | / /
+| .__/ |_||_| \__,_||_|     |_| \__,_||_|/___|
+|_|</pre>
+
+  <section class="intro">
+    <p class="prompt"><span class="ps">$</span> whoami<span class="cursor"></span></p>
+    <p>I'm a <b>computer engineer</b> working where hardware meets software, especially computer architecture and parallel programming. I'm doing an MS in ECE at UIUC. Before that I studied CE &amp; CS at USC and worked at NVIDIA, Applied Invention, and Meta.</p>
+    <p>This is where I keep writeups of things I've built.</p>
+    <p class="links"><a href="#">email</a><a href="#">github</a><a href="#">linkedin</a><a href="#">resume</a></p>
+  </section>
+  </div>
+</div>
+
+  <section class="box">
+    <div class="label mono">[ <b>projects</b> ]</div>
+    <a class="row" href="#post"><span class="d">2025</span><span><span class="t">Out-of-Order RISC-V Processor</span><span class="s">RV32IM core with register renaming and speculative execution.</span><span class="tags">systemverilog · risc-v · comp-arch</span></span></a>
+    <a class="row" href="#"><span class="d">2025</span><span><span class="t">GPU-Accelerated GPT-2 Inference</span><span class="s">Flash Attention, KV caching, and CUTLASS optimizations.</span><span class="tags">cuda · c++ · ml</span></span></a>
+    <a class="row" href="#"><span class="d">2023</span><span><span class="t">MRNAV</span><span class="s">Collision- and deadlock-free multi-robot navigation.</span><span class="tags">c++ · ros · multi-agent</span></span></a>
+    <a class="row" href="#"><span class="d">2023</span><span><span class="t">Sleep Right</span><span class="s">Embedded sleep-environment monitor on an ATMega328P.</span><span class="tags">embedded c · atmega328p</span></span></a>
+    <a class="row" href="#"><span class="d">2022</span><span><span class="t">USCC: a simple C compiler</span><span class="s">SSA construction and register allocation on LLVM.</span><span class="tags">c++ · llvm · compilers</span></span></a>
+    <a class="row" href="#"><span class="d">2022</span><span><span class="t">353NET</span><span class="s">Link-state routing with neighbor discovery and flooding.</span><span class="tags">c++ · networking</span></span></a>
+    <div class="more"><a href="#">all 11 projects →</a></div>
+  </section>
+
+  <section class="box">
+    <div class="label mono">[ <b>experience</b> ]</div>
+    <div class="row"><span class="d">2025</span><span><span class="t">NVIDIA · Tegra Systems Architecture Intern</span><span class="s">LLM-driven framework for architecture design space exploration.</span></span></div>
+    <div class="row"><span class="d">2023–25</span><span><span class="t">Applied Invention · Software Engineer</span><span class="s">ROS2 state machine for a large robotic gantry; greenhouse control software.</span></span></div>
+    <div class="row"><span class="d">2022</span><span><span class="t">Meta · Software Engineer Intern</span><span class="s">12% faster app load for the Facebook Android app.</span></span></div>
+    <div class="row"><span class="d">2021</span><span><span class="t">NVIDIA · Computer Architecture Intern</span><span class="s">Power analysis of GPU streaming multiprocessor subunits.</span></span></div>
+  </section>
+
+
+  <footer>
+    <div class="fine"><span>© 2026 pilar luiz</span><span>the car is real → <a href="#">project car</a></span></div>
+  </footer>
+</div>
+
+<hr class="divider"><p class="divider-label">↓ writeup page</p>
+
+<div class="wrap" id="post">
+  <header class="site">
+    <a class="home" href="#home">~/<b>pilar</b></a>
+    <nav><a href="#">projects</a><a href="#">about</a><button class="theme-toggle" type="button">[light]</button></nav>
+  </header>
+
+  <div class="crumb"><a href="#home">~</a> / <a href="#">projects</a> / ooo-riscv</div>
+  <article>
+    <h1>Out-of-Order RISC-V Processor</h1>
+    <div class="meta">fall 2025 · ECE 411, UIUC · <span>#comp-arch</span> <span>#risc-v</span> <span>#systemverilog</span></div>
+    <p class="dek">An eight-week capstone: a 2-way superscalar RV32IM processor with register renaming, speculation, and a split load-store queue.</p>
+
+    <p>The goal of this project was to design a high-performance out-of-order processor that maximizes instruction-level parallelism while maintaining correct program semantics. The core implements the full <code>RV32IM</code> instruction set, including multiply and divide.</p>
+
+    <figure>
+      <img src="../public/images/mp_ooo_diagram.png" alt="Block diagram of the out-of-order processor">
+      <figcaption>fig. 1 — top-level block diagram</figcaption>
+    </figure>
+
+    <h2>architecture</h2>
+    <p>We used explicit register renaming with a reorder buffer (ROB) to track in-flight instructions. Reservation stations let instructions wait for operands without holding up the rest of the pipeline. Instructions can finish out of order, but they always commit in order:</p>
+
+    <section class="box pipe">
+      <div class="label mono">[ <b>pipeline.gif</b> ]</div>
+      <button class="ctrl" id="pipe-ctrl" type="button">[ pause ]</button>
+      <pre id="pipe" aria-label="Animated pipeline diagram showing instructions finishing out of order but committing in order"></pre>
+      <p class="note">IF fetch · ID decode · RN rename · IS issue · EX execute · CM commit · ·· waiting<br>Notice <code>addi</code> finishes early but waits for <code>mul</code> to commit.</p>
+    </section>
+
+    <h2>advanced features</h2>
+    <ul>
+      <li><b>2-way superscalar:</b> fetch, decode, dispatch, and retire two instructions per cycle.</li>
+      <li><b>Gshare branch predictor:</b> global history combined with the branch address.</li>
+      <li><b>Split load-store queue:</b> independent scheduling while preserving memory order.</li>
+      <li><b>Next-line prefetching</b> on the instruction cache.</li>
+    </ul>
+
+    <h2>what i learned</h2>
+    <p>Not every advanced feature works well with the others. Some combinations gave diminishing returns or created new bottlenecks that canceled out their individual benefits.</p>
+    <p><a href="#">final report (pdf) →</a></p>
+  </article>
+
+  <footer>
+    <div class="fine"><span>© 2026 pilar luiz</span><span><a href="#home">↑ top</a></span></div>
+  </footer>
+</div>
+
+<script>
+// sample-only: Reduce Motion is on for this Mac, so allow previewing animations anyway
+var root0 = document.documentElement;
+try { if (localStorage.getItem("motion") === "on") root0.setAttribute("data-motion", "on"); } catch (e) {}
+function reduceMotion() {
+  return root0.getAttribute("data-motion") !== "on" && !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+document.querySelectorAll(".motionpick button").forEach(function (b) {
+  b.classList.toggle("on", (root0.getAttribute("data-motion") === "on") === (b.dataset.m === "on"));
+  b.addEventListener("click", function () { try { localStorage.setItem("motion", b.dataset.m); } catch (e) {} location.reload(); });
+});
+// theme toggle (dark default; remembered per browser when storage is available)
+(function () {
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem("theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+  function sync() {
+    var t = root.getAttribute("data-theme");
+    document.querySelectorAll(".theme-toggle").forEach(function (b) { b.textContent = t === "dark" ? "[light]" : "[dark]"; });
+  }
+  document.querySelectorAll(".theme-toggle").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+      sync();
+    });
+  });
+  sync();
+})();
+
+// animated ASCII pipeline diagram
+(function () {
+  var el = document.getElementById("pipe");
+  // f = fetch cycle, is = issue cycle, ex = execute latency, cm = commit cycle
+  var instrs = [
+    { asm: "lw   x4, 0(x1)  ", f: 0, is: 3,  ex: 2, cm: 6 },
+    { asm: "mul  x5, x4, x6 ", f: 0, is: 6,  ex: 3, cm: 10 },
+    { asm: "addi x7, x2, 1  ", f: 1, is: 4,  ex: 1, cm: 10 },
+    { asm: "sw   x5, 4(x1)  ", f: 1, is: 10, ex: 1, cm: 12 },
+    { asm: "xor  x8, x7, x3 ", f: 2, is: 6,  ex: 1, cm: 12 },
+    { asm: "beq  x8, x0, L1 ", f: 2, is: 8,  ex: 1, cm: 13 }
+  ];
+  var N = 14;
+  function stage(i, c) {
+    if (c < i.f || c > i.cm) return null;
+    if (c === i.f) return "IF";
+    if (c === i.f + 1) return "ID";
+    if (c === i.f + 2) return "RN";
+    if (c < i.is) return "··";
+    if (c === i.is) return "IS";
+    if (c <= i.is + i.ex) return "EX";
+    if (c < i.cm) return "··";
+    return "CM";
+  }
+  function render(upTo) {
+    var out = '<span class="hd">cycle            ';
+    for (var c = 0; c < N; c++) out += (c < 10 ? " " + c : c) + " ";
+    out += "</span>\n";
+    instrs.forEach(function (i) {
+      out += '<span class="asm">' + i.asm + "</span> ";
+      for (var c = 0; c < N; c++) {
+        var s = c <= upTo ? stage(i, c) : null;
+        out += s ? '<span class="' + (s === "··" ? "w" : s) + '">' + s + "</span> " : "   ";
+      }
+      out += "\n";
+    });
+    el.innerHTML = out;
+  }
+  // Autoplays normally; with Reduce Motion on it starts paused on the full diagram and waits for [ play ].
+  var reduce = reduceMotion();
+  var btn = document.getElementById("pipe-ctrl");
+  var t = -1, timer = null;
+  function tick() { t = t >= N + 3 ? -1 : t + 1; render(Math.min(t, N - 1)); }
+  function play() { if (!timer) { timer = setInterval(tick, 450); } btn.textContent = "[ pause ]"; }
+  function pause() { clearInterval(timer); timer = null; btn.textContent = "[ ▶ play ]"; }
+  btn.addEventListener("click", function () { timer ? pause() : (t >= N - 1 && (t = -1), play()); });
+  if (reduce) { render(N - 1); t = N - 1; pause(); } else { render(-1); play(); }
+})();
+
+// name banner: drawn from a 5x5 pixel font so the lettering style can be swapped
+(function () {
+  var el = document.querySelector(".banner");
+  var FIGLET = el.textContent;
+  var F = {
+    P: ["####.", "#...#", "####.", "#....", "#...."],
+    I: ["###", ".#.", ".#.", ".#.", "###"],
+    L: ["#....", "#....", "#....", "#....", "#####"],
+    A: [".###.", "#...#", "#####", "#...#", "#...#"],
+    R: ["####.", "#...#", "####.", "#..#.", "#...#"],
+    U: ["#...#", "#...#", "#...#", "#...#", ".###."],
+    Z: ["#####", "...#.", "..#..", ".#...", "#####"],
+    " ": ["..", "..", "..", "..", ".."]
+  };
+  function rows(text) { // 5 rows of 0/1 strings, 1-px gap between letters
+    var r = ["", "", "", "", ""];
+    text.split("").forEach(function (ch, k) {
+      for (var y = 0; y < 5; y++) r[y] += (k ? "." : "") + F[ch][y];
+    });
+    return r;
+  }
+  // half-block: two pixel rows per text line -> square pixels
+  function half(text) {
+    var r = rows(text); r.push(".".repeat(r[0].length));
+    var out = [];
+    for (var y = 0; y < 6; y += 2) {
+      var line = "";
+      for (var x = 0; x < r[0].length; x++) {
+        var t = r[y][x] === "#", b = r[y + 1][x] === "#";
+        line += t && b ? "█" : t ? "▀" : b ? "▄" : " ";
+      }
+      out.push(line.replace(/\s+$/, ""));
+    }
+    return out.join("\n");
+  }
+  // led matrix: lit dots in yellow, unlit dots faint
+  function led(text) {
+    return rows(text).map(function (row) {
+      return row.split("").map(function (p) { return p === "#" ? '<span class="on">●</span>' : '<span class="off">·</span>'; }).join("");
+    }).join("\n");
+  }
+  var btns = document.querySelectorAll(".bannerpick button");
+  function set(b) {
+    el.className = "banner" + (b === "figlet" ? "" : " " + b);
+    if (b === "half") el.textContent = half("PILAR LUIZ");
+    else if (b === "led") el.innerHTML = led("PILAR LUIZ");
+    else el.textContent = FIGLET;
+    btns.forEach(function (x) { x.classList.toggle("on", x.dataset.b === b); });
+    try { localStorage.setItem("banner", b); } catch (e) {}
+  }
+  btns.forEach(function (x) { x.addEventListener("click", function () { set(x.dataset.b); }); });
+  var saved = null; try { saved = localStorage.getItem("banner"); } catch (e) {}
+  set(saved || "half");
+})();
+
+// top-of-page variants: name only / $ whoami -> name / hello world / full session
+(function () {
+  var F = {
+    P: ["####.", "#...#", "####.", "#....", "#...."], I: ["###", ".#.", ".#.", ".#.", "###"],
+    L: ["#....", "#....", "#....", "#....", "#####"], A: [".###.", "#...#", "#####", "#...#", "#...#"],
+    R: ["####.", "#...#", "####.", "#..#.", "#...#"], U: ["#...#", "#...#", "#...#", "#...#", ".###."],
+    Z: ["#####", "...#.", "..#..", ".#...", "#####"], H: ["#...#", "#...#", "#####", "#...#", "#...#"],
+    E: ["#####", "#....", "####.", "#....", "#####"], O: [".###.", "#...#", "#...#", "#...#", ".###."],
+    W: ["#...#", "#...#", "#.#.#", "##.##", "#...#"], D: ["####.", "#...#", "#...#", "#...#", "####."],
+    "!": ["#", "#", "#", ".", "#"], " ": ["..", "..", "..", "..", ".."]
+  };
+  function px(text) {
+    var r = ["", "", "", "", ""];
+    text.split("").forEach(function (ch, k) { for (var y = 0; y < 5; y++) r[y] += (k ? "." : "") + F[ch][y]; });
+    r.push(".".repeat(r[0].length));
+    var out = [];
+    for (var y = 0; y < 6; y += 2) {
+      var line = "";
+      for (var x = 0; x < r[0].length; x++) {
+        var t = r[y][x] === "#", b = r[y + 1][x] === "#";
+        line += t && b ? "█" : t ? "▀" : b ? "▄" : " ";
+      }
+      out.push(line.replace(/\s+$/, ""));
+    }
+    return out.join("\n");
+  }
+  // each script is a list of steps: typed commands, printed output, or pixel banners
+  var SCRIPTS = {
+    whoami: [{ cmd: "whoami" }, { px: "PILAR LUIZ" }, { prompt: true }],
+    hello: [{ px: "HELLO WORLD!" }, { cmd: "whoami" }, { out: '<span class="bigname">pilar luiz</span>' }, { prompt: true }],
+    session: [{ cmd: "./hello" }, { out: "hello, world!" }, { cmd: "whoami" }, { px: "PILAR LUIZ" }, { prompt: true }]
+  };
+  var box = document.querySelector(".hero-top"), banner = document.querySelector(".hero .banner");
+  var timers = [];
+  function clear() { timers.forEach(clearTimeout); timers = []; box.innerHTML = ""; }
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+  function line(cls) { var d = document.createElement("div"); d.className = "ln" + (cls ? " " + cls : ""); box.appendChild(d); return d; }
+  function run(steps, animate) {
+    var t = animate ? 400 : 0;
+    steps.forEach(function (st, i) {
+      var last = i === steps.length - 1;
+      if (st.cmd) {
+        later(function () {
+          var d = line(); d.innerHTML = '<span class="ps">$</span> <span class="cmd"></span><span class="cur"></span>';
+          var c = d.querySelector(".cmd");
+          if (!animate) { c.textContent = st.cmd; d.querySelector(".cur").remove(); return; }
+          st.cmd.split("").forEach(function (ch, k) { later(function () { c.textContent += ch; }, 90 + k * 85); });
+          later(function () { var cu = d.querySelector(".cur"); if (cu) cu.remove(); }, 90 + st.cmd.length * 85 + 250);
+        }, t);
+        if (animate) t += 90 + st.cmd.length * 85 + 450;
+      } else if (st.out) {
+        later(function () { line("out").innerHTML = st.out; }, t);
+        if (animate) t += 500;
+      } else if (st.px) {
+        later(function () { var pre = document.createElement("pre"); pre.className = "px"; pre.textContent = px(st.px); pre.setAttribute("aria-label", st.px.toLowerCase()); box.appendChild(pre); }, t);
+        if (animate) t += 600;
+      } else if (st.prompt) {
+        later(function () { line().innerHTML = '<span class="ps">$</span> <span class="cur"></span>'; }, t);
+      }
+    });
+  }
+  var hello = document.querySelector(".hero .hello"), decl = hello.querySelector(".decl");
+  var PARTS = [["ty", "std::string"], ["", " "], ["var", "name"], ["op", " = "], ["str", '"Pilar Luiz"'], ["op", ";"]];
+  function typeDecl(animate) {
+    var spans = PARTS.map(function (p) { var e = document.createElement("span"); if (p[0]) e.className = p[0]; decl.appendChild(e); return e; });
+    var cur = document.createElement("span"); cur.className = "cur"; decl.appendChild(cur);
+    if (!animate) { PARTS.forEach(function (p, i) { spans[i].textContent = p[1]; }); return; }
+    var t = 500;
+    PARTS.forEach(function (p, i) {
+      p[1].split("").forEach(function (ch) { later(function () { spans[i].textContent += ch; }, t); t += 65; });
+    });
+  }
+  var btns = document.querySelectorAll(".toppick button");
+  function set(v) {
+    clear(); decl.innerHTML = "";
+    banner.hidden = v !== "name"; box.hidden = true;
+    hello.hidden = v === "name";
+    hello.classList.toggle("mono", v === "hmono");
+    if (v !== "name") typeDecl(!reduceMotion());
+    btns.forEach(function (b) { b.classList.toggle("on", b.dataset.t === v); });
+    try { localStorage.setItem("top2", v); } catch (e) {}
+    if (typeof stars === "function") setTimeout(stars, 50);
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { set(b.dataset.t); }); });
+  var saved = null; try { saved = localStorage.getItem("top2"); } catch (e) {}
+  set(["hserif", "hmono", "name"].indexOf(saved) >= 0 ? saved : "hserif");
+})();
+
+// sample-only: old-site fonts
+(function () {
+  var root = document.documentElement;
+  var btns = document.querySelectorAll(".fontpick2 button");
+  function set(k, v) {
+    if (v === "serif") root.removeAttribute("data-" + k); else root.setAttribute("data-" + k, v);
+    btns.forEach(function (b) { if (b.dataset.k === k) b.classList.toggle("on", b.dataset.v === v); });
+    try { localStorage.setItem("f-" + k, v); } catch (e) {}
+    if (typeof stars === "function") setTimeout(stars, 50);
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { set(b.dataset.k, b.dataset.v); }); });
+  ["display", "text"].forEach(function (k) {
+    var v = null; try { v = localStorage.getItem("f-" + k); } catch (e) {}
+    set(k, v || (k === "display" ? "luckiest" : "serif"));
+  });
+})();
+
+// sample-only nav-name switcher
+(function () {
+  var NAMES = {
+    cd: '<span class="ps">$</span> cd <b>~</b><span class="cmt">  # pilar luiz</span>',
+    star: '<b class="logo-star">✦</b>',
+    starname: '<b class="logo-star">✦</b> pilar luiz',
+    inc: '#include &lt;<b>pilar</b>&gt;',
+    sv: '<b>pilar</b>.sv'
+  };
+  var btns = document.querySelectorAll(".namepick button");
+  function set(n) {
+    document.querySelectorAll("header.site .home").forEach(function (a) {
+      a.innerHTML = NAMES[n];
+      a.title = "home";
+    });
+    btns.forEach(function (b) { b.classList.toggle("on", b.dataset.n === n); });
+    try { localStorage.setItem("navname", n); } catch (e) {}
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { set(b.dataset.n); }); });
+  var saved = null; try { saved = localStorage.getItem("navname"); } catch (e) {}
+  set(NAMES[saved] ? saved : "cd");
+})();
+
+// sample-only header switcher
+(function () {
+  var root = document.documentElement;
+  var btns = document.querySelectorAll(".headpick button");
+  function set(h) {
+    if (h === "center") root.removeAttribute("data-header"); else root.setAttribute("data-header", h);
+    btns.forEach(function (b) { b.classList.toggle("on", b.dataset.h === h); });
+    try { localStorage.setItem("header", h); } catch (e) {}
+    if (typeof stars === "function") stars();
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { set(b.dataset.h); }); });
+  try { var h = localStorage.getItem("header"); if (h === "center" || h === "left") set(h); } catch (e) {}
+})();
+
+// sample-only font switcher
+(function () {
+  var root = document.documentElement;
+  var btns = document.querySelectorAll(".fontpick button");
+  function set(f) {
+    if (f === "newsreader") root.removeAttribute("data-font"); else root.setAttribute("data-font", f);
+    btns.forEach(function (b) { b.classList.toggle("on", b.dataset.f === f); });
+    try { localStorage.setItem("font3", f); } catch (e) {}
+    stars();
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { set(b.dataset.f); }); });
+  try { var f = null; if (f) set(f); } catch (e) {}
+})();
+
+// ascii stars scattered in the side margins (hidden on narrow screens)
+function stars() {
+  var sky = document.querySelector(".sky");
+  if (!sky) return;
+  sky.innerHTML = "";
+  var W = document.documentElement.clientWidth, H = document.body.scrollHeight;
+  var col = 720, gutter = (W - col) / 2;
+  if (gutter < 90) return;
+  var glyphs = ["*", "+", ".", "·", "'", "✦", "⋆", "*", "."];
+  var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+  var reduce = reduceMotion();
+  var count = Math.round(H / 48);
+  var far = document.createElement("div"), near = document.createElement("div");
+  far.className = near.className = "layer"; far.dataset.speed = "0.45"; near.dataset.speed = "0.2";
+  sky.appendChild(far); sky.appendChild(near);
+  for (var i = 0; i < count; i++) {
+    var s = document.createElement("span");
+    var left = rnd() < 0.5;
+    var x = 24 + rnd() * (gutter - 72);
+    s.style.top = Math.round(rnd() * (H - 40) + 20) + "px";
+    s.style[left ? "left" : "right"] = Math.round(x) + "px";
+    s.textContent = glyphs[Math.floor(rnd() * glyphs.length)];
+    if (rnd() < 0.18) s.className = "y";
+    if (rnd() < 0.65) {
+      s.classList.add("tw");
+      s.style.setProperty("--dur", (2.5 + rnd() * 3.5).toFixed(1) + "s");
+      s.style.setProperty("--delay", (-rnd() * 6).toFixed(1) + "s");
+    }
+    if (rnd() < 0.15) s.style.fontSize = "20px";
+    if (rnd() < 0.2) s.classList.add("sp");
+    (rnd() < 0.5 ? far : near).appendChild(s);
+  }
+  onScroll();
+}
+// a few stars "sparkle" by stepping through . + * + . every so often
+var SPARK = [".", "+", "*", "✦", "*", "+", "."];
+setInterval(function () {
+  var sp = document.querySelectorAll(".sky span.sp");
+  if (!sp.length) return;
+  var star = sp[Math.floor(Math.random() * sp.length)], k = 0;
+  var orig = star.textContent;
+  var iv = setInterval(function () {
+    star.textContent = SPARK[k++];
+    if (k >= SPARK.length) { clearInterval(iv); star.textContent = orig; }
+  }, 140);
+}, 700);
+
+// scroll: car drives toward the flag; star layers drift slower than the page (parallax)
+var ticking = false;
+function onScroll() {
+  var max = document.documentElement.scrollHeight - innerHeight;
+  var p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+  var car = document.querySelector(".drive .car"), flag = document.querySelector(".drive .flag");
+  if (car && flag) {
+    var track = flag.getBoundingClientRect().left - 24 - car.offsetWidth - 16;
+    car.style.transform = "translateX(" + Math.max(0, track * p) + "px)";
+  }
+  if (!reduceMotion()) {
+    document.querySelectorAll(".sky .layer").forEach(function (l) {
+      l.style.transform = "translateY(" + (scrollY * parseFloat(l.dataset.speed)) + "px)";
+    });
+  }
+  ticking = false;
+}
+window.addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
+var starTimer;
+window.addEventListener("resize", function () { clearTimeout(starTimer); starTimer = setTimeout(stars, 150); });
+window.addEventListener("load", stars);
+stars();
+</script>
+</body>
+</html>

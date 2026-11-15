@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redesign Samples</title>
+<style>
+  :root { --bg: #fafafa; --ink: #18181b; --muted: #6b6b72; --rule: #e4e4e7; --card: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #121214; --ink: #ececef; --muted: #9b9ba3; --rule: #2a2a30; --card: #1b1b1f; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  p.lead { color: var(--muted); margin: 0 0 28px; }
+  a.opt { display: block; background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; margin-bottom: 12px; color: inherit; text-decoration: none; }
+  a.opt:hover { border-color: var(--muted); }
+  a.opt b { font-size: 18px; }
+  a.opt span { display: block; color: var(--muted); font-size: 15px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Website redesign samples</h1>
+  <p class="lead">Each sample shows a home page, then a writeup page below it. They all adapt to light and dark mode. Post titles marked "Example" are placeholders.</p>
+  <a class="opt" href="d-terminal.html"><b>D · Terminal (A + B, dark) ★ new</b><span>A's single column and B's monospace details, black by default with a light toggle. Adds an ASCII name banner, bordered sections, a blinking cursor, a car driving through the footer, and an animated pipeline diagram on the writeup page.</span></a>
+  <a class="opt" href="a-notebook.html"><b>A · Notebook</b><span>Serif, single column, text-first, like a personal essay site. Warm paper background with your old purple as the only accent. Best for a writing-heavy, Substack-style site.</span></a>
+  <a class="opt" href="b-lab.html"><b>B · Lab</b><span>Clean sans with monospace details (dates, tags, nav). Feels like an engineer's site and keeps the <code>std::string name</code> line as a quiet nod. Balanced between projects and writing.</span></a>
+  <a class="opt" href="c-gallery.html"><b>C · Gallery</b><span>Modern portfolio: big headline, headshot, project cards with images, and an email signup. Serif body text on writeup pages. Most visual and project-forward.</span></a>
+</div>
+</body>
+</html>
