@@ -1,0 +1,18 @@
+---
+import { yearOf, type Project } from "../lib/projects";
+
+interface Props {
+  project: Project;
+}
+const { project } = Astro.props;
+const { title, summary, tags } = project.data;
+---
+
+<a class="row" href={`/projects/${project.id}/`}>
+  <span class="d">{yearOf(project)}</span>
+  <span>
+    <span class="t">{title}</span>
+    <span class="s">{summary}</span>
+    {tags.length > 0 && <span class="tags">{tags.join(" · ")}</span>}
+  </span>
+</a>

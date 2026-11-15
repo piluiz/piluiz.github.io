@@ -1,0 +1,95 @@
+---
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { getProjects, inlineMarkdown, type Project } from "../../lib/projects";
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project) => ({ params: { slug: project.id }, props: { project } }));
+}
+
+interface Props {
+  project: Project;
+}
+const { project } = Astro.props;
+const { title, date, summary, dek, image, hideImage, imageCaption, tags, stack, links = {} } = project.data;
+const { Content } = await render(project);
+
+// A YouTube link replaces the image with an embedded video, like the old site.
+const yt = links.video?.match(/(?:v=|youtu\.be\/)([\w-]{11})/)?.[1];
+
+const LINK_LABELS: Record<string, string> = {
+  report: "project report",
+  paper: "paper",
+  video: "video",
+  github: "github",
+  demo: "live demo",
+  course: "course",
+  lab: "lab",
+  makers: "usc makers",
+};
+---
+
+<Base title={title} description={summary} image={image}>
+  <div class="crumb"><a href="/">~</a> / <a href="/projects/">projects</a> / {project.id}</div>
+  <article>
+    <h1 class="page-title">{title}</h1>
+    <div class="meta">
+      {date.toLowerCase()}
+      {tags.length > 0 && " · "}
+      {tags.map((t, i) => <span class="tag">{(i ? " " : "") + "#" + t.toLowerCase().replace(/\s+/g, "-")}</span>)}
+    </div>
+
+    {dek && <p class="dek" set:html={inlineMarkdown(dek)} />}
+
+    {
+      yt ? (
+        <figure class="video">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${yt}`}
+            title={title}
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          />
+        </figure>
+      ) : (
+        image &&
+        !hideImage && (
+          <figure>
+            <img src={image} alt={title} loading="lazy" />
+            {imageCaption && <figcaption>{imageCaption}</figcaption>}
+          </figure>
+        )
+      )
+    }
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {
+      stack && stack.length > 0 && (
+        <section class="box">
+          <div class="label">[ <b>stack</b> ]</div>
+          <p class="stack">{stack.join(" · ")}</p>
+        </section>
+      )
+    }
+
+    {
+      Object.keys(links).length > 0 && (
+        <section class="box">
+          <div class="label">[ <b>links</b> ]</div>
+          <div class="linkbox">
+            {Object.entries(links).map(([k, href]) => (
+              <a href={href} target="_blank" rel="noopener">
+                {LINK_LABELS[k] ?? k}
+              </a>
+            ))}
+          </div>
+        </section>
+      )
+    }
+  </article>
+</Base>

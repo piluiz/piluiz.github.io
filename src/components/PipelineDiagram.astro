@@ -1,0 +1,87 @@
+---
+// Animated ASCII pipeline diagram: a simplified 2-wide out-of-order core where
+// instructions finish out of order but commit in order. Used in ooo-riscv.mdx.
+---
+
+<section class="box pipe">
+  <div class="label">[ <b>pipeline.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated pipeline diagram: instructions finish out of order but commit in order"></pre>
+  <p class="note">
+    IF fetch · ID decode · RN rename · IS issue · EX execute · CM commit · ·· waiting<br />
+    Notice <code>addi</code> finishes early but waits for <code>mul</code> to commit.
+  </p>
+</section>
+
+<style>
+  .pipe { margin: 28px 0; }
+  .pipe pre { margin: 0 0 12px; font: 13px/1.55 var(--mono); overflow-x: auto; color: var(--muted); border: 0; padding: 0; }
+  .pipe :global(.hd) { color: var(--faint); }
+  .pipe :global(.asm) { color: var(--ink); }
+  .pipe :global(.IS) { color: var(--ink); }
+  .pipe :global(.EX) { color: var(--accent); font-weight: 600; }
+  .pipe :global(.CM) { color: var(--bg); background: var(--accent); font-weight: 600; }
+  .pipe :global(.w) { color: var(--faint); }
+  .pipe .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .pipe .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+  .pipe .note code { font-size: 12px; }
+</style>
+
+<script>
+  // f = fetch cycle, is = issue cycle, ex = execute latency, cm = commit cycle
+  const INSTRS = [
+    { asm: "lw   x4, 0(x1)  ", f: 0, is: 3, ex: 2, cm: 6 },
+    { asm: "mul  x5, x4, x6 ", f: 0, is: 6, ex: 3, cm: 10 },
+    { asm: "addi x7, x2, 1  ", f: 1, is: 4, ex: 1, cm: 10 },
+    { asm: "sw   x5, 4(x1)  ", f: 1, is: 10, ex: 1, cm: 12 },
+    { asm: "xor  x8, x7, x3 ", f: 2, is: 6, ex: 1, cm: 12 },
+    { asm: "beq  x8, x0, L1 ", f: 2, is: 8, ex: 1, cm: 13 },
+  ];
+  const N = 14;
+  type Instr = (typeof INSTRS)[number];
+
+  function stage(i: Instr, c: number): string | null {
+    if (c < i.f || c > i.cm) return null;
+    if (c === i.f) return "IF";
+    if (c === i.f + 1) return "ID";
+    if (c === i.f + 2) return "RN";
+    if (c < i.is) return "··";
+    if (c === i.is) return "IS";
+    if (c <= i.is + i.ex) return "EX";
+    if (c < i.cm) return "··";
+    return "CM";
+  }
+
+  document.querySelectorAll<HTMLElement>(".pipe").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    const render = (upTo: number) => {
+      let out = '<span class="hd">cycle            ';
+      for (let c = 0; c < N; c++) out += (c < 10 ? " " + c : c) + " ";
+      out += "</span>\n";
+      for (const i of INSTRS) {
+        out += `<span class="asm">${i.asm}</span> `;
+        for (let c = 0; c < N; c++) {
+          const s = c <= upTo ? stage(i, c) : null;
+          out += s ? `<span class="${s === "··" ? "w" : s}">${s}</span> ` : "   ";
+        }
+        out += "\n";
+      }
+      el.innerHTML = out;
+    };
+
+    let t = -1;
+    let timer: number | undefined;
+    const tick = () => { t = t >= N + 3 ? -1 : t + 1; render(Math.min(t, N - 1)); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 450); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => {
+      if (timer) pause();
+      else { if (t >= N - 1) t = -1; play(); }
+    });
+
+    // Autoplay normally; with Reduce Motion on, start paused on the full diagram.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { render(N - 1); t = N - 1; pause(); }
+    else { render(-1); play(); }
+  });
+</script>

@@ -1,0 +1,18 @@
+---
+import Base from "../../layouts/Base.astro";
+import ProjectRow from "../../components/ProjectRow.astro";
+import { getProjects } from "../../lib/projects";
+
+const projects = await getProjects();
+---
+
+<Base title="Projects" description="Projects by Pilar Luiz: computer architecture, GPUs, compilers, robotics, and embedded systems.">
+  <div class="crumb"><a href="/">~</a> / projects</div>
+  <h1 class="page-title">Projects</h1>
+  <p class="page-sub">Things I've built in school, research, and for fun, newest first.</p>
+
+  <section class="box">
+    <div class="label">[ <b>ls -t</b> ]</div>
+    {projects.map((p) => <ProjectRow project={p} />)}
+  </section>
+</Base>

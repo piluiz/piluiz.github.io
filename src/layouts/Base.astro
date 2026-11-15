@@ -1,0 +1,183 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string; // page title; the site name is appended
+  description?: string;
+  image?: string;
+}
+const {
+  title,
+  description = "Pilar Luiz: computer engineer working where hardware meets software. Projects and writeups.",
+  image,
+} = Astro.props;
+const fullTitle = title ? `${title} · Pilar Luiz` : "Pilar Luiz";
+const path = Astro.url.pathname;
+const canonical = new URL(path, Astro.site);
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.png" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    {image && <meta property="og:image" content={new URL(image, Astro.site)} />}
+    <meta name="theme-color" content="#0c0c0d" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=Luckiest+Guy&display=swap"
+    />
+    <!-- apply the saved theme before paint (dark is the default) -->
+    <script is:inline>
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div class="sky" aria-hidden="true"></div>
+
+    <div class="wrap">
+      <header class="site">
+        <a class="home" href="/" title="home"><span class="ps">$</span> cd <b>~</b><span class="cmt">  # pilar luiz</span></a>
+        <nav aria-label="Main">
+          <a href="/projects/" aria-current={path.startsWith("/projects") ? "page" : undefined}>projects</a>
+          <button class="theme-toggle" type="button" aria-label="Toggle light and dark theme">[light]</button>
+        </nav>
+      </header>
+
+      <main>
+        <slot />
+      </main>
+
+      <footer class="site">
+        <span>© {new Date().getFullYear()} pilar luiz</span>
+        <span>the car is real → <a href="https://www.instagram.com/pilarsprojectcar/" target="_blank" rel="noopener">@pilarsprojectcar</a></span>
+      </footer>
+    </div>
+
+    <div class="drive" aria-hidden="true">
+      <div class="lane"></div>
+      <pre class="car">  ____
+_/__|_\_
+'-o--o-'</pre>
+      <pre class="flag">|▚▞▚
+|▞▚▞
+|</pre>
+    </div>
+
+    <script>
+      const root = document.documentElement;
+      const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // ---- theme toggle ----
+      const toggles = document.querySelectorAll<HTMLButtonElement>(".theme-toggle");
+      const syncToggle = () => {
+        const dark = root.getAttribute("data-theme") !== "light";
+        toggles.forEach((b) => (b.textContent = dark ? "[light]" : "[dark]"));
+      };
+      toggles.forEach((b) =>
+        b.addEventListener("click", () => {
+          const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+          root.setAttribute("data-theme", next);
+          try { localStorage.setItem("theme", next); } catch {}
+          syncToggle();
+        }),
+      );
+      syncToggle();
+
+      // ---- ascii stars in the side margins ----
+      const GLYPHS = ["*", "+", ".", "·", "'", "✦", "⋆", "*", "."];
+      function drawStars() {
+        const sky = document.querySelector<HTMLElement>(".sky");
+        if (!sky) return;
+        sky.innerHTML = "";
+        const W = document.documentElement.clientWidth;
+        const H = document.body.scrollHeight;
+        const gutter = (W - 720) / 2;
+        if (gutter < 90) return;
+        let seed = 7;
+        const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+        const far = document.createElement("div");
+        const near = document.createElement("div");
+        far.className = near.className = "layer";
+        far.dataset.speed = "0.45";
+        near.dataset.speed = "0.2";
+        sky.append(far, near);
+        const count = Math.round(H / 48);
+        for (let i = 0; i < count; i++) {
+          const s = document.createElement("span");
+          const left = rnd() < 0.5;
+          s.style.top = Math.round(rnd() * (H - 40) + 20) + "px";
+          s.style[left ? "left" : "right"] = Math.round(24 + rnd() * (gutter - 72)) + "px";
+          s.textContent = GLYPHS[Math.floor(rnd() * GLYPHS.length)];
+          if (rnd() < 0.18) s.classList.add("y");
+          if (rnd() < 0.65) {
+            s.classList.add("tw");
+            s.style.setProperty("--dur", (2.5 + rnd() * 3.5).toFixed(1) + "s");
+            s.style.setProperty("--delay", (-rnd() * 6).toFixed(1) + "s");
+          }
+          if (rnd() < 0.15) s.style.fontSize = "20px";
+          if (rnd() < 0.2) s.classList.add("sp");
+          (rnd() < 0.5 ? far : near).appendChild(s);
+        }
+        onScroll();
+      }
+
+      // a few stars "sparkle" by stepping through . + * ✦ * + .
+      const SPARK = [".", "+", "*", "✦", "*", "+", "."];
+      setInterval(() => {
+        const sp = document.querySelectorAll<HTMLElement>(".sky span.sp");
+        if (!sp.length || document.hidden) return;
+        const star = sp[Math.floor(Math.random() * sp.length)];
+        const orig = star.textContent;
+        let k = 0;
+        const iv = setInterval(() => {
+          star.textContent = SPARK[k++];
+          if (k >= SPARK.length) { clearInterval(iv); star.textContent = orig; }
+        }, 140);
+      }, 700);
+
+      // ---- scroll: car drives toward the flag; stars drift slower than the page ----
+      let ticking = false;
+      function onScroll() {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+        const car = document.querySelector<HTMLElement>(".drive .car");
+        const flag = document.querySelector<HTMLElement>(".drive .flag");
+        if (car && flag) {
+          const track = flag.getBoundingClientRect().left - 24 - car.offsetWidth - 16;
+          car.style.transform = `translateX(${Math.max(0, track * p)}px)`;
+        }
+        if (!reduceMotion()) {
+          document.querySelectorAll<HTMLElement>(".sky .layer").forEach((l) => {
+            l.style.transform = `translateY(${scrollY * parseFloat(l.dataset.speed || "0")}px)`;
+          });
+        }
+        ticking = false;
+      }
+      addEventListener("scroll", () => {
+        if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+      }, { passive: true });
+
+      let resizeTimer: number | undefined;
+      addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(drawStars, 150);
+      });
+      addEventListener("load", drawStars);
+      document.fonts?.ready.then(drawStars);
+      drawStars();
+    </script>
+  </body>
+</html>

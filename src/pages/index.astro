@@ -1,0 +1,92 @@
+---
+import Base from "../layouts/Base.astro";
+import ProjectRow from "../components/ProjectRow.astro";
+import { getProjects } from "../lib/projects";
+import { experience } from "../data/experience";
+
+const projects = await getProjects();
+const featured = projects.filter((p) => p.data.featured);
+---
+
+<Base>
+  <section class="hello">
+    <h1>Hello, world!</h1>
+    <code class="decl" aria-label='std::string name = "Pilar Luiz";'
+      ><span class="ty">std::string</span> <span class="var">name</span><span class="op"> = </span><span class="str">"Pilar Luiz"</span><span class="op">;</span><span class="cur"></span></code
+    >
+  </section>
+
+  <section class="intro">
+    <p>
+      I'm a <b>computer engineer</b> passionate about the intersection of hardware and software, with a particular
+      interest in computer architecture. I'm currently pursuing an MS in Electrical &amp; Computer Engineering at the
+      University of Illinois Urbana-Champaign, focusing on computer architecture and parallel programming. I received
+      my BS in Computer Engineering &amp; Computer Science from the University of Southern California.
+    </p>
+    <p>This is where I keep writeups of things I've built.</p>
+    <p class="links">
+      <a href="mailto:pilarluiz13@gmail.com">email</a>
+      <a href="https://github.com/piluiz" target="_blank" rel="noopener">github</a>
+      <a href="https://www.linkedin.com/in/pilarluiz/" target="_blank" rel="noopener">linkedin</a>
+    </p>
+  </section>
+
+  <section class="box">
+    <div class="label">[ <b>projects</b> ]</div>
+    {featured.map((p) => <ProjectRow project={p} />)}
+    <div class="more"><a href="/projects/">all {projects.length} projects →</a></div>
+  </section>
+
+  <section class="box">
+    <div class="label">[ <b>experience</b> ]</div>
+    {
+      experience.map((x) => (
+        <details class="xp">
+          <summary>
+            <div class="row">
+              <span class="d">{x.year}</span>
+              <span>
+                <span class="t">
+                  {x.company} · {x.role}
+                  <span class="tog" aria-hidden="true" />
+                </span>
+                <span class="s">{x.dates}</span>
+              </span>
+            </div>
+          </summary>
+          <ul>
+            {x.bullets.map((b) => (
+              <li>{b}</li>
+            ))}
+          </ul>
+        </details>
+      ))
+    }
+  </section>
+</Base>
+
+<script>
+  // Type out the std::string line like the old site (skipped with Reduce Motion).
+  const decl = document.querySelector<HTMLElement>(".hello .decl");
+  if (decl && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const parts = [...decl.querySelectorAll<HTMLElement>("span:not(.cur)")];
+    const texts = parts.map((p) => p.textContent ?? "");
+    const gaps = [...decl.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE) as Text[];
+    const gapTexts = gaps.map((g) => g.textContent ?? "");
+    parts.forEach((p) => (p.textContent = ""));
+    gaps.forEach((g) => (g.textContent = ""));
+    // interleave spans and the plain-text gaps in document order
+    const seq: [Node, string][] = [];
+    decl.childNodes.forEach((n) => {
+      if (n instanceof HTMLElement && !n.classList.contains("cur")) seq.push([n, texts[parts.indexOf(n)]]);
+      else if (n.nodeType === Node.TEXT_NODE) seq.push([n, gapTexts[gaps.indexOf(n as Text)]]);
+    });
+    let t = 500;
+    for (const [node, text] of seq) {
+      for (const ch of text) {
+        setTimeout(() => (node.textContent += ch), t);
+        t += 65;
+      }
+    }
+  }
+</script>

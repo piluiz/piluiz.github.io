@@ -1,64 +1,58 @@
 ## Pilar Luiz — Personal Website
 
-This is my personal website that I designed and built from scratch. It showcases my work, interests, and background.
+My personal website: projects and writeups. Live at **https://piluiz.github.io**.
 
 ### Tech stack
 
-- React (Create React App)
-- React Router
-- Bootstrap + custom CSS
-- Hosted on GitHub Pages
-
-### Prerequisites
-
-- Node.js 18+ (recommended: latest LTS)
-- npm 8+
-
-Note: Some dev dependencies expect Node 18+. Using older Node versions may produce warnings or build issues.
+- [Astro](https://astro.build) (static site, Markdown/MDX content)
+- Plain CSS (`src/styles/global.css`): black, white, and butter yellow; IBM Plex Serif + IBM Plex Mono, Luckiest Guy for the "Hello, world!"
+- Hosted on GitHub Pages via the `gh-pages` branch
 
 ### Setup
 
-1. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Start the development server:
-   ```bash
-   npm start
-   ```
-   The app will be available at `http://localhost:3000`.
-
-### Build
-
-Create an optimized production build:
+Requires Node 22+ (`.nvmrc` is included, so `nvm use` picks the right version).
 
 ```bash
-npm run build
+nvm use
+npm install
+npm run dev        # http://localhost:4321
 ```
 
-### Deploy (GitHub Pages)
+### Adding a project
 
-This repo is configured to deploy to GitHub Pages via the `gh-pages` package.
+Create a file in `src/content/projects/`. The filename becomes the URL (`my-thing.md` → `/projects/my-thing/`).
 
-1. Ensure `homepage` in `package.json` is set to `https://piluiz.github.io`.
-2. Build and publish:
-   ```bash
-   npm run deploy
-   ```
-   This runs `predeploy` (build) and then publishes the `build/` folder to the `gh-pages` branch.
+```markdown
+---
+title: "My Thing"
+date: "Spring 2026"        # shown as-is
+sort: 2026.3               # ordering: year + .3 spring / .6 summer / .9 fall
+summary: "One line shown in project lists."
+dek: "Intro paragraph at the top of the page. [Links](https://example.com) work here."
+image: "/images/my-thing.png"   # put images in public/images
+tags: ["C++", "FPGA"]
+stack: ["C++", "FPGA", "Verilog"]
+links:
+  github: "https://github.com/piluiz/my-thing"
+  report: "/documents/my-thing.pdf"   # put PDFs in public/documents
+featured: true             # also show on the home page
+---
 
-After deployment, give a minute for propagation, then hard-refresh the site:
+## Overview
 
+Write the rest in normal Markdown.
 ```
-Cmd+Shift+R (macOS) or Ctrl+Shift+R (Windows/Linux)
+
+Other optional fields: `hideImage`, `imageCaption`, `draft` (hides the page). Link keys with nicer labels: `report`, `paper`, `video` (YouTube links are embedded), `github`, `demo`, `course`, `lab`, `makers`.
+
+Use `.mdx` instead of `.md` to drop in components, like the animated pipeline diagram in `ooo-riscv.mdx`.
+
+Experience lives in `src/data/experience.ts`.
+
+### Deploy
+
+```bash
+npm run deploy
 ```
 
-### Troubleshooting
-
-- If you see Browserslist warnings, update the database:
-  ```bash
-  npx update-browserslist-db@latest
-  ```
-- If the live site seems stale, try a cache-busting query (e.g., append `?v=2`) or open in a private window.
+This builds to `dist/` and publishes it to the `gh-pages` branch. Give it a minute, then hard-refresh (Cmd+Shift+R).

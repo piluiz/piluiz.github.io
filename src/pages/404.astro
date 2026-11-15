@@ -1,0 +1,25 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Not found">
+  <section class="notfound">
+    <pre><span class="ps">$</span> cd <span class="path"></span>
+bash: cd: no such file or directory
+
+<span class="ps">$</span> <a href="/">cd ~</a><span class="cur"></span></pre>
+  </section>
+</Base>
+
+<style>
+  .notfound { margin: 96px 0 40px; }
+  pre { font: 15px/1.8 var(--mono); color: var(--muted); white-space: pre-wrap; margin: 0; }
+  .ps { color: var(--accent); }
+  .path { color: var(--ink); }
+  a { color: var(--accent); }
+</style>
+
+<script>
+  const p = document.querySelector(".notfound .path");
+  if (p) p.textContent = decodeURIComponent(location.pathname);
+</script>

@@ -3,3 +3,5 @@ package-lock.json
 fontawesome/
 node_modules/
 build/
+dist/
+.astro/
