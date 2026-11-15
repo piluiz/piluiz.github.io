@@ -85,6 +85,12 @@ header.site nav a:hover, header.site nav a[aria-current="page"] { color: var(--a
 .intro { text-align: center; }
 .intro p { max-width: 33em; margin: 0 auto 12px; font-size: 15.5px; line-height: 1.7; }
 .intro b { font-weight: 500; color: var(--accent); }
+.intro strong { font-weight: 600; color: var(--ink); } /* quieter emphasis: white, not yellow */
+.intro strong.med { font-weight: 500; }
+.intro p.edu { font: 13px/1.9 var(--mono); color: var(--muted); margin-top: 18px; }
+.edu b { color: var(--ink); font-weight: 500; }
+.edu .sep { color: var(--faint); }
+.edu .when { color: var(--accent); }
 .links { font: 13px var(--mono); margin-top: 18px !important; }
 .links a { color: var(--muted); text-decoration: none; margin: 0 7px; display: inline-block; }
 .links a::before { content: "["; color: var(--faint); }
