@@ -145,12 +145,12 @@ details.xp li::before { content: "*"; position: absolute; left: 0; color: var(--
 .crumb a { color: var(--muted); text-decoration: none; }
 .crumb a:hover { color: var(--accent); }
 .page-title { font-size: 32px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; margin: 14px 0 10px; }
-.page-sub { color: var(--muted); margin: 0 0 8px; }
+.page-sub { color: var(--muted); font-size: 15px; margin: 0 0 8px; }
 
 /* ---------- project page ---------- */
 article .meta { font: 13px var(--mono); color: var(--muted); margin-bottom: 24px; }
 article .meta .tag { color: var(--ink); }
-article .dek { font-size: 18.5px; color: var(--muted); margin: 0 0 8px; }
+article .dek { font-size: 17px; color: var(--muted); margin: 0 0 8px; }
 article .dek a, .prose a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 article figure { margin: 32px 0; }
 article figure img {
