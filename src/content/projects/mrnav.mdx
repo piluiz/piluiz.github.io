@@ -1,0 +1,62 @@
+---
+title: "MRNAV: Multi-Robot Aware Planning and Control Stack"
+date: "2022 - 2023"
+sort: 2023.5
+summary: "A navigation stack that lets teams of quadrotors fly through cluttered, moving environments without collisions or deadlocks."
+dek: "At USC's [Robotic Embedded Systems Laboratory](https://robotics.usc.edu/resl/), I helped build MRNAV, a planning and control stack that keeps teams of robots from colliding or getting stuck in cluttered environments. I built its short-horizon safety layer and co-authored the paper ([arXiv](https://arxiv.org/abs/2308.13499))."
+image: "https://img.youtube.com/vi/6WC0YCEctoE/maxresdefault.jpg"
+imageCaption: "Simulation recordings: the colored columns are trees, the blue boxes are moving obstacles, and the quadrotors are the small markers weaving between them."
+tags: ["C++", "ROS", "Robotics"]
+stack: ["C++", "ROS", "RotorS", "Safety Barrier Certificates", "Path Planning"]
+links:
+  paper: "https://arxiv.org/abs/2308.13499"
+  video: "https://www.youtube.com/watch?v=6WC0YCEctoE"
+  github: "https://github.com/baskinburak/mrnav"
+  lab: "https://robotics.usc.edu/resl/"
+featured: true
+---
+
+import SafetyLayer from "../../components/SafetyLayer.astro";
+
+## Overview
+
+Navigating a team of robots through a cluttered space is hard for two reasons: robots can collide with obstacles or with each other, and they can deadlock, stuck waiting on each other forever. Most planners handle one of these well but not both.
+
+MRNAV splits the problem across three layers, each planning over a different time horizon:
+
+- **Long horizon:** finds a global path around known static obstacles, so robots don't get trapped in dead ends
+- **Medium horizon:** replans a smooth trajectory a few seconds ahead, avoiding moving obstacles and teammates
+- **Short horizon:** a fast safety layer that checks every command right before it reaches the motors
+
+![MRNAV system architecture: long, medium, and short horizon modules](/images/mrnav-stack.png)
+
+## My part: the short-horizon safety layer
+
+I implemented the short-horizon module in C++ and ROS using **safety barrier certificates**. The controller first computes the acceleration it *wants* to apply, and the safety layer replaces it with the closest acceleration that keeps the robot clear of walls, moving obstacles, and other robots. When everything is safe, it leaves the command alone.
+
+<SafetyLayer />
+
+Because the quadrotor controller doesn't take accelerations directly, the safety layer sits inside it, between computing the desired acceleration and converting it into thrust and motor speeds. It runs much faster than the planners above it, which is what makes it a reliable last line of defense.
+
+Outside of simulation, I also spent time soldering and building physical robots for the lab to test on.
+
+## Results
+
+In simulation, eight quadrotors flew for eight hours straight through a forest with 300 moving obstacles, with no collisions and no deadlocks.
+
+The paper also tests what happens when each layer is removed. In a maze with 200 moving obstacles, only the full stack avoided both failures:
+
+| | Collisions | Deadlocked robots |
+|---|---|---|
+| **Full stack** | **0 / 142 tasks** | **0 / 8** |
+| Without short horizon | 29 / 183 tasks | 0 / 8 |
+| Without medium horizon | 2 / 141 tasks | 6 / 8 |
+| Without long horizon | 6 / 22 tasks | 7 / 8 |
+
+Each run lasted 300 simulated seconds, so the task counts vary: robots that deadlock stop finishing tasks. Without the long horizon, seven of the eight robots got stuck, which is why that run only got through 22.
+
+## Takeaways
+
+Before MRNAV, I had worked on other research projects, but they kept hitting dead ends and never produced a paper, so I was very excited to be part of this one. I loved getting to work with physical hardware, physics, simulation, and C++ all in one project.
+
+This research is what got me into robotics. I nearly started a PhD in computer science at Brown focused on robotics, but chose industry instead, where I went on to build software for greenhouse robots at Applied Invention.

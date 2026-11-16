@@ -53,6 +53,7 @@ const LINK_LABELS: Record<string, string> = {
             allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen
           />
+          {imageCaption && <figcaption>{imageCaption}</figcaption>}
         </figure>
       ) : (
         image &&

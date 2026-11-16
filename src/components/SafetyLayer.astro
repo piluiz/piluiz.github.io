@@ -1,0 +1,118 @@
+---
+// Animated safety barrier certificates: two robots fly head-on toward each
+// other's start. Each wants to go straight to its goal; the safety layer
+// minimally changes their commands so their safety bubbles never overlap.
+// A real (tiny) simulation, single-integrator robots, one barrier per pair.
+---
+
+<section class="box safety">
+  <div class="label">[ <b>safety.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated diagram: two robots flying head-on toward each other; the safety layer nudges their paths just enough to keep their safety bubbles from overlapping, then lets them return to their planned paths"></pre>
+  <p class="note">
+    <span class="hi">A</span> <span class="hi">B</span> robots · <span class="dim">───</span> path each one wants to fly ·
+    <span class="ink">·</span> path actually flown · <span class="hi">∙</span> safety bubble<br />
+    Each robot heads straight for its goal. When the safety layer sees they would get too close, it changes their
+    commands as little as possible to keep the bubbles apart, then hands control back.
+  </p>
+</section>
+
+<style>
+  .safety { margin: 28px 0; }
+  .safety pre { margin: 0 0 12px; font: 13px/1.25 var(--mono); overflow-x: auto; color: var(--muted); border: 0; padding: 0; }
+  .safety :global(.hi) { color: var(--accent); font-weight: 600; }
+  .safety :global(.ink) { color: var(--ink); }
+  .safety :global(.dim) { color: var(--faint); }
+  .safety .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .safety .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>
+
+<script>
+  const W = 56, ROWS = 13, MID = 11, YSCALE = 1.6; // world y units per text row
+  const DS = 7; // minimum distance between robots (two bubbles of radius 3.5)
+  const GAMMA = 0.35, SPEED = 1;
+  type V = [number, number];
+  type Frame = { p: V[]; active: boolean; dist: number };
+
+  function simulate(): Frame[] {
+    const bots = [
+      { p: [5, 11.8] as V, g: [51, 11.8] as V },
+      { p: [51, 10.2] as V, g: [5, 10.2] as V },
+    ];
+    const frames: Frame[] = [{ p: bots.map((b) => b.p), active: false, dist: Infinity }];
+    for (let t = 0; t < 80; t++) {
+      let active = false;
+      const vs = bots.map((b, i) => {
+        // desired: straight at the goal
+        const d: V = [b.g[0] - b.p[0], b.g[1] - b.p[1]];
+        const n = Math.hypot(d[0], d[1]);
+        const u: V = n < SPEED ? d : [(d[0] / n) * SPEED, (d[1] / n) * SPEED];
+        // barrier h = |pi - pj|^2 - DS^2 must satisfy dh/dt >= -gamma*h; each robot takes half.
+        const o = bots[1 - i];
+        const a: V = [b.p[0] - o.p[0], b.p[1] - o.p[1]];
+        const aa = a[0] * a[0] + a[1] * a[1];
+        const lo = (-GAMMA * (aa - DS * DS)) / 4;
+        const au = a[0] * u[0] + a[1] * u[1];
+        if (au >= lo) return u;
+        active = true; // closest safe velocity: project onto the constraint
+        const k = (lo - au) / aa;
+        return [u[0] + k * a[0], u[1] + k * a[1]] as V;
+      });
+      bots.forEach((b, i) => (b.p = [b.p[0] + vs[i][0], b.p[1] + vs[i][1]]));
+      const dist = Math.hypot(bots[0].p[0] - bots[1].p[0], bots[0].p[1] - bots[1].p[1]);
+      frames.push({ p: bots.map((b) => b.p), active, dist });
+      if (bots.every((b) => Math.hypot(b.g[0] - b.p[0], b.g[1] - b.p[1]) < 0.05)) break;
+    }
+    return frames;
+  }
+  const FRAMES = simulate();
+
+  const col = (x: number) => Math.round(x);
+  const row = (y: number) => Math.round((y - MID) / YSCALE) + Math.floor(ROWS / 2);
+
+  function frame(f: number): string {
+    const fr = FRAMES[f];
+    const g: string[][] = Array.from({ length: ROWS }, () => Array(W).fill(" "));
+    const put = (x: number, y: number, s: string) => {
+      const c = col(x), r = row(y);
+      if (r >= 0 && r < ROWS && c >= 0 && c < W) g[r][c] = s;
+    };
+    // the straight paths they want to fly
+    for (let x = 5; x <= 51; x++) { put(x, 11.8, '<span class="dim">─</span>'); put(x, 10.2, '<span class="dim">─</span>'); }
+    // trails
+    for (let k = 0; k < f; k++) FRAMES[k].p.forEach((p) => put(p[0], p[1], '<span class="ink">·</span>'));
+    // safety bubbles
+    const bub = fr.active ? '<span class="hi">∙</span>' : '<span class="dim">∙</span>';
+    fr.p.forEach((p) => {
+      for (let t = 0; t < 32; t++) {
+        const th = (t / 32) * 2 * Math.PI;
+        put(p[0] + (DS / 2) * Math.cos(th), p[1] + (DS / 2) * Math.sin(th), bub);
+      }
+    });
+    fr.p.forEach((p, i) => put(p[0], p[1], `<span class="hi">${"AB"[i]}</span>`));
+
+    let out = g.map((r) => r.join("").replace(/\s+$/, "")).join("\n") + "\n\n";
+    const gap = isFinite(fr.dist) ? `distance ${fr.dist.toFixed(1)}  (must stay ≥ ${DS.toFixed(1)})` : "";
+    out += fr.active
+      ? `safety layer  <span class="hi">adjusting</span>   <span class="dim">${gap}</span>\n`
+      : `safety layer  <span class="dim">idle: commands pass through</span>   <span class="dim">${gap}</span>\n`;
+    return out;
+  }
+
+  document.querySelectorAll<HTMLElement>(".safety").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    const LAST = FRAMES.length - 1;
+    let f = 0;
+    let timer: number | undefined;
+    const render = () => (el.innerHTML = frame(Math.min(f, LAST)));
+    const tick = () => { f = f >= LAST + 12 ? 0 : f + 1; render(); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 140); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused at the closest pass.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { f = 26; render(); pause(); }
+    else { render(); play(); }
+  });
+</script>
