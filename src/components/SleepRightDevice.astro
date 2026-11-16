@@ -1,0 +1,136 @@
+---
+// Animated ASCII drawing of the Sleep Right prototype running through one
+// night: set the alarm, low-power sleep, pulse monitoring in the 90 minutes
+// before the alarm, then a vibration wake-up at the light → REM transition.
+---
+
+<section class="box device">
+  <div class="label">[ <b>sleep-right.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated drawing of the Sleep Right device: the user sets an alarm, the device sleeps in low power, monitors heart rate in the 90 minutes before the alarm, and vibrates to wake the user at the transition from light sleep to REM, before the alarm time"></pre>
+</section>
+
+<style>
+  .device { margin: 28px 0; }
+  .device pre { margin: 0 0 6px; font: 13px/1.4 var(--mono); overflow-x: auto; color: var(--faint); border: 0; padding: 0; }
+  .device :global(.hi) { color: var(--accent); font-weight: 600; }
+  .device :global(.ink) { color: var(--ink); }
+  .device :global(.mu) { color: var(--muted); }
+  .device :global(.faint) { color: var(--faint); }
+  .device .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+</style>
+
+<script>
+  type State = "set" | "sleep" | "monitor" | "wake";
+  type F = {
+    state: State;
+    ticks: number; // how long to hold this frame (in 450 ms ticks)
+    lcd?: string[]; // 4 lines of 20 chars; undefined = display off
+    clock: string;
+    note: string;
+    knob?: boolean;
+    button?: boolean;
+    pulse?: boolean;
+    buzz?: boolean;
+  };
+
+  const ALARM = "07:00";
+  const mon = (t: string, bpm: number, stage: string, note: string, ticks = 3): F => ({
+    state: "monitor", ticks, clock: t, note, pulse: true,
+    lcd: [`Time:  ${t}`, `Alarm: ${ALARM}`, `BPM:   ${bpm}`, `Stage: ${stage}`],
+  });
+  const off = (t: string): F => ({
+    state: "sleep", ticks: 3, clock: t, note: "low power: display off, one interrupt checks the clock",
+  });
+
+  const FRAMES: F[] = [
+    { state: "set", ticks: 4, clock: "22:47", note: "turn the knob to set the alarm", knob: true,
+      lcd: ["Time:  22:47", "Alarm: 06:00", "", "> alarm hours"] },
+    { state: "set", ticks: 4, clock: "22:47", note: "turn the knob to set the alarm", knob: true,
+      lcd: ["Time:  22:47", "Alarm: 07:00", "", "> alarm hours"] },
+    { state: "set", ticks: 3, clock: "22:48", note: "press enter, then go to sleep", button: true,
+      lcd: ["Time:  22:48", "Alarm: 07:00", "", "Good night!"] },
+    off("23:00"), off("01:30"), off("04:00"),
+    mon("05:30", 51, "deep", "90 min before the alarm: start reading the pulse", 4),
+    mon("05:48", 52, "deep", "low, steady heart rate: deep sleep"),
+    mon("06:05", 55, "light", "heart rate rising: light sleep"),
+    mon("06:19", 56, "light", "heart rate rising: light sleep"),
+    mon("06:31", 61, "REM?", "jump in heart rate: maybe REM, take more readings", 4),
+    mon("06:36", 62, "REM", "confirmed: light sleep → REM", 4),
+    { state: "wake", ticks: 8, clock: "06:36", note: "vibrate now, 24 min before the alarm", buzz: true,
+      lcd: ["Time:  06:36", "Alarm: 07:00", "", "Good Morning!"] },
+    { state: "wake", ticks: 3, clock: "06:36", note: "any button turns the alarm off", button: true,
+      lcd: ["Time:  06:36", "Alarm: 07:00", "", "Good Morning!"] },
+  ];
+
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const span = (cls: string, s: string) => `<span class="${cls}">${esc(s)}</span>`;
+  const STATES: [State, string][] = [["set", "set alarm"], ["sleep", "sleep"], ["monitor", "monitor"], ["wake", "wake"]];
+
+  function render(f: F, tick: number): string {
+    const on = !!f.lcd;
+    // A row is a list of [text, class] segments; widths are counted on the
+    // plain text so every row of the board lines up exactly.
+    type Seg = [string, string?];
+    const html = (segs: Seg[]) => segs.map(([t, c]) => (c ? span(c, t) : esc(t))).join("");
+    const len = (segs: Seg[]) => segs.reduce((n, [t]) => n + [...t].length, 0);
+    const IN = 46; // inner width of the board
+    const board = (segs: Seg[]) => html([["│", "mu"], ...segs, [" ".repeat(Math.max(0, IN - len(segs)))], ["│", "mu"]]);
+
+    const lcd = (i: number): Seg[] => {
+      const t = (f.lcd?.[i] ?? "").padEnd(20).slice(0, 20);
+      if (!on) return [[" ".repeat(20)]];
+      // blink the heart next to the BPM while monitoring
+      if (f.pulse && i === 2) return [[t.slice(0, 10), "ink"], [tick % 2 === 0 ? " ♥" : "  ", "hi"], [t.slice(12), "ink"]];
+      return [[t, i === 3 && f.state !== "set" ? "hi" : "ink"]];
+    };
+    const knob = f.knob ? "hi" : "mu";
+    const btn = f.button ? "hi" : "mu";
+    const fr = on ? "mu" : "faint";
+    const lcdRow = (i: number, side: Seg[]): Seg[] => [["  "], ["│", fr], ...lcd(i), ["│", fr], ...side];
+
+    const rows = [
+      html([["┌" + "─".repeat(IN) + "┐", "mu"]]),
+      board([["  "], ["┌────────────────────┐", fr], ["      "], ["╭───╮", knob]]),
+      board(lcdRow(0, [["      "], ["│ ◉ │", knob], [" knob", "mu"]])),
+      board(lcdRow(1, [["      "], ["╰───╯", knob]])),
+      board(lcdRow(2, [["     "], ["[■] [■]", btn]])),
+      board(lcdRow(3, [["     "], ["[■] [■]", btn], [" buttons", "mu"]])),
+      board([["  "], ["└────────────────────┘", fr]]),
+      board([["  "], ["ATmega328P · RTC · I2C", "mu"]]),
+      html([["└──┬" + "─".repeat(IN - 6) + "┬──┘", "mu"]]),
+      html([
+        ["   └─ ", "mu"], ["pulse sensor", f.pulse ? "hi" : "mu"],
+        [" ".repeat(IN - 34)], ["haptic motor", f.buzz ? "hi" : "mu"], [" ─┘", "mu"],
+        [f.buzz ? (tick % 2 ? "  ≈≈≈" : " ≈≈≈ ") : "", "hi"],
+      ]),
+    ];
+
+    const bar = STATES.map(([s, name]) => (s === f.state ? span("hi", `▸ ${name}`) : span("mu", `  ${name}`))).join(span("faint", "  "));
+    return (
+      rows.join("\n") +
+      "\n\n" + bar + "\n" +
+      `${span("mu", f.clock)}  ${span("ink", f.note)}`
+    );
+  }
+
+  document.querySelectorAll<HTMLElement>(".device").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    let i = 0, held = 0, tick = 0;
+    let timer: number | undefined;
+    const draw = () => (el.innerHTML = render(FRAMES[i], tick));
+    const step = () => {
+      tick++;
+      if (++held >= FRAMES[i].ticks) { held = 0; i = (i + 1) % FRAMES.length; }
+      draw();
+    };
+    const play = () => { if (!timer) timer = window.setInterval(step, 450); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused on the wake-up.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { i = FRAMES.findIndex((f) => f.state === "wake"); draw(); pause(); }
+    else { draw(); play(); }
+  });
+</script>

@@ -8,7 +8,6 @@ dek: "Implemented a complete peer-to-peer network routing system in C++ that sim
 image: "/images/osi.png"
 tags: ["C++","Networking","Distributed Systems"]
 stack: ["C++","Networking","Multi-threading","Distributed Systems"]
-featured: true
 ---
 
 ## Overview

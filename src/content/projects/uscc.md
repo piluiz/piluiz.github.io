@@ -12,7 +12,6 @@ stack: ["C++","LLVM","Recursive Descent Parsing","SSA","Register Allocation"]
 links:
   github: "https://github.com/piluiz/uscc"
   course: "https://itp439-20231.github.io/USCC.html"
-featured: true
 ---
 
 ## Overview
