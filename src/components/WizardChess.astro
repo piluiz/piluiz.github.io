@@ -1,0 +1,150 @@
+---
+// Animated Wizard's Chess: a spoken move is parsed and checked, then a magnet
+// under the board slides to the piece and drags it along the lines between
+// squares (so it never runs into other pieces). On a capture, the magnet
+// flips polarity under the captured piece and it breaks open.
+---
+
+<section class="box wchess">
+  <div class="label">[ <b>wizards-chess.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated chessboard: a spoken move is recognized, then a magnet under the board drags the piece along the lines between squares to its destination; a captured piece breaks open"></pre>
+  <p class="note">
+    <span class="ink">N</span> white · <span class="mu">p</span> black · <span class="hi">◦</span> magnet under the board ·
+    <span class="hi">·</span> path between the squares
+  </p>
+</section>
+
+<style>
+  .wchess { margin: 28px 0; }
+  .wchess pre { margin: 0 0 12px; font: 13px/1.3 var(--mono); overflow-x: auto; color: var(--faint); border: 0; padding: 0; }
+  .wchess :global(.hi) { color: var(--accent); font-weight: 600; }
+  .wchess :global(.ink) { color: var(--ink); font-weight: 600; }
+  .wchess :global(.mu) { color: var(--muted); }
+  .wchess :global(.path) { color: var(--accent); opacity: 0.55; }
+  .wchess .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .wchess .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>
+
+<script>
+  type Pt = [number, number]; // character coordinates on the 33 x 17 board
+  type Frame = {
+    pieces: Map<string, string>;
+    mag: Pt;
+    carry?: string;
+    path: Pt[];
+    burst?: { at: Pt; ch: string };
+    say: string;
+    info: string;
+  };
+
+  const FILES = "abcdefgh";
+  const center = (sq: string): Pt => [FILES.indexOf(sq[0]) * 4 + 2, (8 - Number(sq[1])) * 2 + 1];
+
+  // Route between two points using only the board's grid lines.
+  function route(a: Pt, b: Pt, aIsCenter: boolean, bIsCenter: boolean): Pt[] {
+    const pts: Pt[] = [];
+    let [x, y] = a;
+    const go = (tx: number, ty: number) => {
+      while (x !== tx) { x += Math.sign(tx - x); pts.push([x, y]); }
+      while (y !== ty) { y += Math.sign(ty - y); pts.push([x, y]); }
+    };
+    const sx = Math.sign(b[0] - a[0]) || 1, sy = Math.sign(b[1] - a[1]) || 1;
+    if (aIsCenter) go(x + 2 * sx, y + sy); // out to a corner of the square
+    // the destination square's nearest corner (same side as we left from if moving straight along a file or rank)
+    const ex = b[0] === a[0] ? sx : -sx, ey = b[1] === a[1] ? sy : -sy;
+    const end: Pt = bIsCenter ? [b[0] + 2 * ex, b[1] + ey] : b;
+    go(end[0], y); // along a horizontal line
+    go(x, end[1]); // then a vertical line
+    if (bIsCenter) go(b[0], b[1]);
+    return pts;
+  }
+
+  const START = new Map<string, string>();
+  "rnbqkbnr".split("").forEach((p, i) => { START.set(FILES[i] + "8", p); START.set(FILES[i] + "1", p.toUpperCase()); });
+  for (const f of FILES) { START.set(f + "7", "p"); START.set(f + "2", "P"); }
+
+  const MOVES = [
+    { say: "knight to f3", from: "g1", to: "f3", info: "Ng1-f3" },
+    { say: "pawn to e5", from: "e7", to: "e5", info: "e7-e5" },
+    { say: "knight takes e5", from: "f3", to: "e5", info: "Nf3xe5" },
+  ];
+
+  function build(): Frame[] {
+    const frames: Frame[] = [];
+    const pieces = new Map(START);
+    let mag: Pt = [0, 16];
+    let magAtCenter = false;
+    const snap = (f: Partial<Frame>) => frames.push({ pieces: new Map(pieces), mag, path: [], say: "", info: "", ...f });
+
+    const hold = (n: number, f: Partial<Frame>) => { for (let i = 0; i < n; i++) snap(f); };
+
+    hold(8, { info: "listening…" });
+    for (const m of MOVES) {
+      const say = `"${m.say}"`;
+      hold(7, { say, info: "speech to text…" });
+      hold(10, { say, info: `${m.info}  ✓ legal move` });
+      const travel = (to: Pt, toCenter: boolean, info: string, carry?: string) => {
+        const p = route(mag, to, magAtCenter, toCenter);
+        p.forEach((pt, i) => { mag = pt; snap({ say, info, carry, path: p.slice(i + 1) }); });
+        magAtCenter = toCenter;
+      };
+      if (pieces.has(m.to)) {
+        travel(center(m.to), true, "magnet moves under the captured piece");
+        const victim = pieces.get(m.to)!;
+        pieces.delete(m.to);
+        for (const ch of [victim, "*", "✶", "✶"]) hold(4, { say, info: "flip the magnet: the piece breaks open", burst: { at: center(m.to), ch } });
+        hold(10, { say, info: "the broken piece is removed by hand" });
+      }
+      travel(center(m.from), true, "magnet moves under the piece");
+      const piece = pieces.get(m.from)!;
+      pieces.delete(m.from);
+      travel(center(m.to), true, "drag it between the squares", piece);
+      pieces.set(m.to, piece);
+      hold(10, { say, info: `${m.info}  done` });
+    }
+    return frames;
+  }
+  const FRAMES = build();
+
+  const span = (c: string, s: string) => `<span class="${c}">${s}</span>`;
+  const isWhite = (p: string) => p === p.toUpperCase();
+
+  function render(f: Frame): string {
+    const W = 33, H = 17;
+    const g: string[][] = Array.from({ length: H }, (_, y) =>
+      Array.from({ length: W }, (_, x) => (y % 2 === 0 ? (x % 4 === 0 ? "+" : "-") : x % 4 === 0 ? "|" : " ")),
+    );
+    f.path.forEach(([x, y]) => (g[y][x] = span("path", "·")));
+    f.pieces.forEach((p, sq) => { const [x, y] = center(sq); g[y][x] = span(isWhite(p) ? "ink" : "mu", p); });
+    if (f.burst) { const [x, y] = f.burst.at; g[y][x] = span("hi", f.burst.ch); }
+    const [mx, my] = f.mag;
+    g[my][mx] = f.carry ? span("hi", f.carry) : span("hi", "◦");
+
+    const lines = g.map((row, y) => (y % 2 === 1 ? ` ${8 - (y - 1) / 2} ` : "   ") + row.join(""));
+    lines.push("     " + FILES.split("").join("   "));
+    return (
+      `${span("mu", "voice ")} ${span("ink", f.say || " ")}\n` +
+      `${span("mu", "move  ")} ${span("hi", f.info)}\n\n` +
+      lines.join("\n")
+    );
+  }
+
+  document.querySelectorAll<HTMLElement>(".wchess").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    const LAST = FRAMES.length - 1;
+    let f = 0;
+    let timer: number | undefined;
+    const draw = () => (el.innerHTML = render(FRAMES[Math.min(f, LAST)]));
+    const tick = () => { f = f >= LAST + 12 ? 0 : f + 1; draw(); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 110); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused mid-way through the first knight move.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      f = FRAMES.findIndex((x) => x.carry === "N" && x.path.length < 6); draw(); pause();
+    } else { draw(); play(); }
+  });
+</script>

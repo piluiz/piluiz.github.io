@@ -1,0 +1,39 @@
+---
+title: "Wizard's Chess"
+date: "Fall 2020 - Spring 2021"
+sort: 2021.3
+summary: "A real-life Wizard's Chess board: say your move out loud, and the piece moves itself."
+dek: "A real-life version of Wizard's Chess from Harry Potter: players say their moves out loud, and the pieces move across the board on their own. We built it as a team of about ten students in USC's [Makers](https://viterbimakers.usc.edu/) club. I led the software subteam and built the voice recognition and web app."
+image: "/images/WizardChess.jpeg"
+tags: ["React", "Python", "Raspberry Pi"]
+stack: ["React", "Speech-to-Text", "Python", "Flask", "Raspberry Pi", "Stepper Motors"]
+links:
+  video: "https://www.youtube.com/watch?v=f9krP_1CuyY"
+  makers: "https://viterbimakers.usc.edu/"
+---
+
+import WizardChess from "../../components/WizardChess.astro";
+
+## How a move works
+
+You could play against a friend or against a computer opponent. Either way, each move goes through the same steps:
+
+1. **Say it (or click it):** the React web app shows the board and listens through a speech-to-text library. If you didn't want to talk out loud, you could click a piece and its destination instead.
+2. **Check it:** the spoken words become a move, and a Python chess library keeps track of the game and checks that the move is legal.
+3. **Send it:** the web app sends the move over HTTP to a Flask server running on a Raspberry Pi.
+4. **Move it:** the Pi drives stepper motors that slide an electromagnet under the board. It grabs the magnet in the base of the piece and drags it along the lines between the squares, so it never bumps into other pieces.
+5. **Capture:** to take a piece, the electromagnet flips polarity under it. That flips the magnet inside the piece, and its 3D-printed hinged sides fall open.
+
+<WizardChess />
+
+![The finished board mid-game, with its 3D-printed pieces](/images/WizardChess.jpeg)
+
+## My part
+
+I led the software subteam, which was only a few people. Most of our work was defining the interfaces: how the web app, the voice recognition, the chess logic, and the motor controller on the Pi would talk to each other, and how it would all fit together with the hardware the other subteams were building. I also built the voice recognition and the web app.
+
+## Takeaways
+
+Up to this point, almost all of my projects had been software only, so it was really fun to run into mechanical and electrical problems along the way and learn how to solve them. It was also really fun to come up with an idea and build it all the way to completion.
+
+The one downside was timing. It was during COVID, so a lot of the work happened in isolation instead of side by side in the lab.
