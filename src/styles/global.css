@@ -231,15 +231,14 @@ footer.site a:hover { color: var(--accent); }
 .sky span { position: absolute; font: 14px/1 var(--mono); color: var(--faint); user-select: none; }
 .sky span.y { color: var(--accent); opacity: .55; }
 .sky span.tw { animation: twinkle var(--dur, 4s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
-@keyframes twinkle { 0%, 100% { opacity: .12; } 50% { opacity: .95; } }
-/* light mode: clouds drifting sideways + a few birds */
+@keyframes twinkle { 0%, 100% { opacity: .05; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+/* light mode: clouds drifting sideways */
 .sky span.cloud {
   white-space: pre; font: 13px/1.15 var(--mono); color: var(--muted);
   animation:
     drift var(--dur, 36s) ease-in-out var(--delay, 0s) infinite alternate,
     fade var(--fade, 20s) ease-in-out var(--fade-delay, 0s) infinite;
 }
-.sky span.bird { font: 11px/1 var(--mono); color: var(--muted); opacity: .7; white-space: pre; }
 @keyframes drift { from { transform: translateX(-18px); } to { transform: translateX(18px); } }
 /* fade in, linger, fade out, stay gone briefly */
 @keyframes fade { 0%, 100% { opacity: 0; } 15%, 70% { opacity: .75; } 85% { opacity: 0; } }
@@ -256,7 +255,9 @@ footer.site a:hover { color: var(--accent); }
 }
 .drive .lane { position: absolute; left: 16px; right: 16px; bottom: 9px; border-bottom: 1px dashed var(--faint); }
 .drive pre { position: absolute; bottom: 10px; margin: 0; font: 9px/1.1 var(--mono); white-space: pre; }
-.drive .car { left: 16px; color: var(--accent); will-change: transform; }
+.drive .car { position: absolute; left: 16px; bottom: 10px; color: var(--accent); will-change: transform; pointer-events: auto; text-decoration: none; cursor: pointer; }
+.drive .car pre { position: static; }
+.drive .car:hover { color: var(--ink); }
 .drive .flag { right: 16px; color: var(--muted); }
 
 /* ---------- small screens ---------- */

@@ -68,9 +68,9 @@ const canonical = new URL(path, Astro.site);
 
     <div class="drive" aria-hidden="true">
       <div class="lane"></div>
-      <pre class="car">  ____
+      <a class="car" href="https://www.instagram.com/pilarsprojectcar/" target="_blank" rel="noopener" tabindex="-1" title="the car is real → @pilarsprojectcar"><pre>  ____
 _/__|_\_
-'-o--o-'</pre>
+'-o--o-'</pre></a>
       <pre class="flag">|▚▞▚
 |▞▚▞
 |</pre>
@@ -122,7 +122,7 @@ _/__|_\_
         near.dataset.speed = "0.2";
         sky.append(far, near);
 
-        // light mode: clouds and a few birds instead of stars
+        // light mode: clouds instead of stars
         if (root.getAttribute("data-theme") === "light") {
           if (gutter < 140) { onScroll(); return; }
           const clouds = Math.round(H / 170);
@@ -138,15 +138,6 @@ _/__|_\_
             c.style.setProperty("--fade-delay", (-rnd() * 28).toFixed(0) + "s");
             (rnd() < 0.5 ? far : near).appendChild(c);
           }
-          const birds = Math.round(H / 420);
-          for (let i = 0; i < birds; i++) {
-            const b = document.createElement("span");
-            b.className = "bird";
-            b.textContent = rnd() < 0.5 ? "v" : "v  v";
-            b.style.top = Math.round(rnd() * (H - 40) + 20) + "px";
-            b.style[rnd() < 0.5 ? "left" : "right"] = Math.round(24 + rnd() * (gutter - 80)) + "px";
-            near.appendChild(b);
-          }
           onScroll();
           return;
         }
@@ -159,13 +150,13 @@ _/__|_\_
           s.style[left ? "left" : "right"] = Math.round(24 + rnd() * (gutter - 72)) + "px";
           s.textContent = GLYPHS[Math.floor(rnd() * GLYPHS.length)];
           if (rnd() < 0.18) s.classList.add("y");
-          if (rnd() < 0.65) {
+          if (rnd() < 0.9) {
             s.classList.add("tw");
-            s.style.setProperty("--dur", (2.5 + rnd() * 3.5).toFixed(1) + "s");
-            s.style.setProperty("--delay", (-rnd() * 6).toFixed(1) + "s");
+            s.style.setProperty("--dur", (1.4 + rnd() * 2.6).toFixed(1) + "s");
+            s.style.setProperty("--delay", (-rnd() * 4).toFixed(1) + "s");
           }
           if (rnd() < 0.15) s.style.fontSize = "20px";
-          if (rnd() < 0.2) s.classList.add("sp");
+          if (rnd() < 0.35) s.classList.add("sp");
           (rnd() < 0.5 ? far : near).appendChild(s);
         }
         onScroll();
@@ -182,8 +173,8 @@ _/__|_\_
         const iv = setInterval(() => {
           star.textContent = SPARK[k++];
           if (k >= SPARK.length) { clearInterval(iv); star.textContent = orig; }
-        }, 140);
-      }, 700);
+        }, 110);
+      }, 250);
 
       // ---- scroll: car drives toward the flag; stars drift slower than the page ----
       let ticking = false;
