@@ -1,0 +1,42 @@
+---
+title: "Schedule Gurus"
+date: "Fall 2020"
+course: "USC CSCI 201"
+sort: 2020.9
+summary: "A full-stack web app that turns a list of USC classes into the best conflict-free weekly schedule."
+dek: "Schedule Gurus is a web app that turns a list of USC classes into a conflict-free weekly schedule, then picks the best one by professor ratings or walking distance between classes. It was our six-person final project for USC's CSCI 201 (Principles of Software Development). I built most of the frontend and helped with the database and with connecting the frontend to the Java backend."
+image: "/images/ScheduleGurus.png"
+imageCaption: "Viewing a friend's generated schedule, with RateMyProfessor scores for each instructor"
+tags: ["Java", "PHP", "Full Stack"]
+stack: ["Java", "Java Servlets", "PHP", "MySQL", "JavaScript", "Bootstrap"]
+links:
+  github: "https://github.com/schedule-gurus/usc-schedule-planner"
+---
+
+import BitsetSchedule from "../../components/BitsetSchedule.astro";
+
+## How it works
+
+1. **Sign in and pick classes:** students create an account and enter the courses they want to take.
+2. **Fetch every section:** the Java backend pulls each course's lectures, labs, discussions, and quizzes from USC's Schedule of Classes.
+3. **Find every valid schedule:** the backend tries every combination of sections and keeps the ones with no time conflicts.
+4. **Pick the best one:** valid schedules are ranked by average RateMyProfessor score, or by walking distance between buildings.
+5. **Save and share:** students save their schedules and can add friends to see theirs.
+
+## Checking for conflicts with bitsets
+
+The scheduler checks a lot of combinations, so conflict checks needed to be fast. Each section becomes a bitmap of the week: Monday through Friday, 7am to 10pm, one bit per 10 minutes, for 450 bits. Two sections conflict exactly when their bitmaps overlap, so each check is a single AND instead of comparing start and end times.
+
+<BitsetSchedule />
+
+## My part
+
+I built the pages people actually use: signing up and logging in, entering classes, viewing generated schedules, and finding friends to see theirs. Behind those pages, I worked on the MySQL database that stores accounts, saved schedules, and friend lists.
+
+A lot of my work was integration: making the PHP frontend, the database, and the Java scheduling servlet work together as one app. With six people each building their own piece, the hardest part was often getting those pieces to talk to each other.
+
+## Takeaways
+
+This was my first full-stack project, and it was cool to see every layer come together, from the database and Java backend to the pages people actually click through. Working on a team of six also meant splitting the app into pieces that could be built separately and still fit together at the end.
+
+The biggest thing we'd improve is speed. Trying every combination of sections grows quickly as you add classes, so larger schedules took a long time to generate.

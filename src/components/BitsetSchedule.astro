@@ -1,0 +1,110 @@
+---
+// Animated bitset scheduling: each section is a bitmap of the week, a
+// conflict is any overlapping bit (schedule AND section != 0), and a section
+// that fits is merged in (schedule OR section). Shown in 30-minute cells;
+// the real scheduler used 10-minute bits (450 for Mon-Fri, 7am-10pm).
+---
+
+<section class="box bitset">
+  <div class="label">[ <b>bitset.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated diagram: class sections are added to a weekly bitmap one at a time; a section whose bits overlap the schedule is a conflict and gets skipped"></pre>
+  <p class="note">
+    <span class="ink">█</span> schedule so far · <span class="hi">▒</span> section being checked ·
+    <span class="hi">✕</span> overlapping bits<br />
+    Every section is a bitmap of the week. If <i>schedule AND section</i> is zero, it fits and gets merged in with OR.
+    Otherwise it's a conflict.
+  </p>
+</section>
+
+<style>
+  .bitset { margin: 28px 0; }
+  .bitset pre { margin: 0 0 12px; font: 13px/1.5 var(--mono); overflow-x: auto; color: var(--faint); border: 0; padding: 0; }
+  .bitset :global(.hi) { color: var(--accent); font-weight: 600; }
+  .bitset :global(.ink) { color: var(--ink); }
+  .bitset :global(.mu) { color: var(--muted); }
+  .bitset .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .bitset .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>
+
+<script>
+  const DAYS = ["M", "T", "W", "H", "F"];
+  const CELLS = 30; // 7:00-22:00 in 30-minute cells
+  type Sec = { name: string; days: string; start: number; end: number; label: string };
+
+  // A real week from the app's screenshot (CSCI 201 + EE 109), plus one lab that clashes.
+  const SECTIONS: Sec[] = [
+    { name: "CSCI-201 Lec", days: "MW", start: 1000, end: 1150, label: "MW 10:00-11:50" },
+    { name: "EE-109 Lec", days: "TH", start: 1100, end: 1220, label: "TH 11:00-12:20" },
+    { name: "CSCI-201 Lab", days: "W", start: 1600, end: 1750, label: "W  4:00-5:50pm" },
+    { name: "EE-109 Lab", days: "W", start: 1600, end: 1720, label: "W  4:00-5:20pm" },
+    { name: "EE-109 Lab", days: "W", start: 1400, end: 1520, label: "W  2:00-3:20pm" },
+  ];
+
+  const cell = (hhmm: number) => (Math.floor(hhmm / 100) - 7) * 2 + (hhmm % 100 >= 30 ? 1 : 0);
+  function bits(s: Sec): boolean[][] {
+    const g = DAYS.map(() => Array(CELLS).fill(false));
+    DAYS.forEach((d, i) => {
+      if (!s.days.includes(d)) return;
+      for (let c = cell(s.start); c <= cell(s.end - 1); c++) g[i][c] = true;
+    });
+    return g;
+  }
+
+  type Frame = { sched: boolean[][]; cand?: boolean[][]; sec?: Sec; phase: "start" | "check" | "fit" | "clash" | "done" };
+  const FRAMES: Frame[] = [];
+  let sched = DAYS.map(() => Array(CELLS).fill(false));
+  FRAMES.push({ sched, phase: "start" });
+  for (const s of SECTIONS) {
+    const b = bits(s);
+    const clash = b.some((row, i) => row.some((v, c) => v && sched[i][c]));
+    FRAMES.push({ sched, cand: b, sec: s, phase: "check" });
+    FRAMES.push({ sched, cand: b, sec: s, phase: clash ? "clash" : "fit" });
+    if (!clash) sched = sched.map((row, i) => row.map((v, c) => v || b[i][c]));
+  }
+  FRAMES.push({ sched, phase: "done" });
+
+  function render(f: Frame): string {
+    let out = `<span class="mu">     7am       12pm      5pm    10pm</span>\n`;
+    DAYS.forEach((d, i) => {
+      let row = "";
+      for (let c = 0; c < CELLS; c++) {
+        const s = f.sched[i][c], n = f.cand?.[i][c];
+        if (n && s) row += f.phase === "check" ? '<span class="hi">▒</span>' : '<span class="hi">✕</span>';
+        else if (n) row += f.phase === "fit" ? '<span class="ink">█</span>' : '<span class="hi">▒</span>';
+        else if (s) row += '<span class="ink">█</span>';
+        else row += "·";
+      }
+      out += `  <span class="mu">${d}</span>  ${row}\n`;
+    });
+    out += "\n";
+    const s = f.sec;
+    if (f.phase === "start") out += `<span class="mu">start with an empty week</span>`;
+    else if (f.phase === "done") out += `<span class="hi">valid schedule found.</span> <span class="mu">the real search tries every combination of sections</span>`;
+    else {
+      out += `<span class="ink">${s!.name.padEnd(13)}</span><span class="mu">${s!.label}</span>\n`;
+      out +=
+        f.phase === "check" ? `<span class="mu">schedule AND section = ?</span>`
+        : f.phase === "fit" ? `<span class="mu">schedule AND section = 0</span>  <span class="hi">fits</span><span class="mu">, so OR it in</span>`
+        : `<span class="mu">schedule AND section ≠ 0</span>  <span class="hi">conflict</span><span class="mu">, try another section</span>`;
+    }
+    return out;
+  }
+
+  document.querySelectorAll<HTMLElement>(".bitset").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    const LAST = FRAMES.length - 1;
+    let f = 0;
+    let timer: number | undefined;
+    const draw = () => (el.innerHTML = render(FRAMES[Math.min(f, LAST)]));
+    const tick = () => { f = f >= LAST + 3 ? 0 : f + 1; draw(); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 1100); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused on the conflict.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { f = FRAMES.findIndex((x) => x.phase === "clash"); draw(); pause(); }
+    else { draw(); play(); }
+  });
+</script>
