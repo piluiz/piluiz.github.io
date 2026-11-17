@@ -8,12 +8,24 @@ interface Props {
 }
 const {
   title,
-  description = "Pilar Luiz: computer engineer working where hardware meets software. Projects and writeups.",
+  description = "Pilar Luiz is a computer engineer working where hardware meets software, with a focus on computer architecture. MS ECE student at UIUC. Projects and writeups.",
   image,
 } = Astro.props;
 const fullTitle = title ? `${title} · Pilar Luiz` : "Pilar Luiz";
 const path = Astro.url.pathname;
 const canonical = new URL(path, Astro.site);
+
+// structured data so search engines can connect the site to its owner
+const person = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Pilar Luiz",
+  url: Astro.site?.href,
+  jobTitle: "Computer Engineer",
+  description: "Computer engineer working where hardware meets software, with a focus on computer architecture.",
+  affiliation: { "@type": "CollegeOrUniversity", name: "University of Illinois Urbana-Champaign" },
+  sameAs: ["https://github.com/piluiz", "https://www.linkedin.com/in/pilarluiz/"],
+};
 ---
 
 <!doctype html>
@@ -29,7 +41,11 @@ const canonical = new URL(path, Astro.site);
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     {image && <meta property="og:image" content={new URL(image, Astro.site)} />}
+    <meta property="og:type" content={path === "/" ? "profile" : "article"} />
+    <meta property="og:site_name" content="Pilar Luiz" />
     <meta name="theme-color" content="#0c0c0d" />
+    <meta name="google-site-verification" content="n_Ep_eWUWV2Hq9uJSKLVymkbW9Hozr4LW_gcRd0KN2Q" />
+    {path === "/" && <script type="application/ld+json" set:html={JSON.stringify(person)} />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
