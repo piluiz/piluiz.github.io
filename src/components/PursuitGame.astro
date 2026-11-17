@@ -1,0 +1,130 @@
+---
+// Animated pursuit domain: three programmed predators and one learning
+// predator try to surround the prey on a grid whose edges wrap around.
+// Two episodes: early in training (the learner wanders, the prey escapes)
+// and after training (the learner covers the last side, the prey is caught).
+// An illustration of the setup, simulated in the browser, not recorded data.
+---
+
+<section class="box pursuit">
+  <div class="label">[ <b>pursuit.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated pursuit game: early in training the learning predator wanders and the prey escapes; after training it covers the last open side and the four predators trap the prey"></pre>
+  <p class="note">
+    <span class="ink">o</span> prey · <span class="mu">P</span> programmed predators ·
+    <span class="hi">L</span> predator learning with RL<br />
+    The prey is caught when predators block all four sides. The edges wrap around, so three predators can't
+    corner it alone: the fourth has to learn to fill the gap.
+  </p>
+</section>
+
+<style>
+  .pursuit { margin: 28px 0; }
+  .pursuit pre { margin: 0 0 12px; font: 13px/1.35 var(--mono); overflow-x: auto; color: var(--faint); border: 0; padding: 0; }
+  .pursuit :global(.hi) { color: var(--accent); font-weight: 600; }
+  .pursuit :global(.ink) { color: var(--ink); font-weight: 600; }
+  .pursuit :global(.mu) { color: var(--muted); }
+  .pursuit .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .pursuit .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>
+
+<script>
+  const W = 12, H = 9;
+  type P = [number, number];
+  type Frame = { prey: P; preds: P[]; caught: boolean };
+
+  const wrap = (x: number, n: number) => ((x % n) + n) % n;
+  const d1 = (a: number, b: number, n: number) => { const d = Math.abs(a - b); return Math.min(d, n - d); };
+  const dist = (p: P, q: P) => d1(p[0], q[0], W) + d1(p[1], q[1], H);
+  const same = (p: P, q: P) => p[0] === q[0] && p[1] === q[1];
+  const MOVES: P[] = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+  const SIDES: P[] = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // N E S W of the prey; the learner takes W
+
+  function rng(seed: number) {
+    return () => ((seed = (seed * 1664525 + 1013904223) >>> 0), seed / 2 ** 32);
+  }
+
+  function episode(trained: boolean, steps: number): Frame[] {
+    const r = rng(1);
+    let prey: P = [6, 4];
+    let preds: P[] = [[1, 1], [10, 1], [9, 7], [2, 7]];
+    const frames: Frame[] = [{ prey, preds, caught: false }];
+    for (let t = 0; t < steps; t++) {
+      const taken: P[] = [];
+      preds = preds.map((p, i) => {
+        const cands = MOVES.map((m) => [wrap(p[0] + m[0], W), wrap(p[1] + m[1], H)] as P).filter(
+          (c) => !same(c, prey) && !taken.some((q) => same(q, c)) && !preds.some((q, j) => j > i && same(q, c)),
+        );
+        let c: P | undefined;
+        if (i === 3 && !trained) c = cands[Math.floor(r() * cands.length)]; // untrained: wander
+        else {
+          const goal: P = [wrap(prey[0] + SIDES[i][0], W), wrap(prey[1] + SIDES[i][1], H)];
+          c = cands.sort((a, b) => dist(a, goal) - dist(b, goal))[0];
+        }
+        c = c ?? p;
+        taken.push(c);
+        return c;
+      });
+      const caught = SIDES.every((s) => preds.some((p) => same(p, [wrap(prey[0] + s[0], W), wrap(prey[1] + s[1], H)])));
+      if (caught) { frames.push({ prey, preds, caught }); break; }
+      // the prey is a bit slower, and runs from the nearest predators
+      if (t % 3 !== 2) {
+        let best: P | undefined, score = -1;
+        for (const m of MOVES) {
+          const c: P = [wrap(prey[0] + m[0], W), wrap(prey[1] + m[1], H)];
+          if (preds.some((p) => same(p, c))) continue;
+          const s = Math.min(...preds.map((p) => dist(p, c))) * 10 + preds.reduce((a, p) => a + dist(p, c), 0) + r() * 0.5;
+          if (s > score) { score = s; best = c; }
+        }
+        if (best) prey = best;
+      }
+      frames.push({ prey, preds, caught: false });
+    }
+    return frames;
+  }
+
+  const EPISODES = [
+    { title: "early in training", frames: episode(false, 30) },
+    { title: "after training", frames: episode(true, 30) },
+  ];
+  // flatten into one timeline, holding the last frame of each episode
+  const HOLD = 8;
+  const TIMELINE: { e: number; f: number }[] = [];
+  EPISODES.forEach((ep, e) => {
+    ep.frames.forEach((_, f) => TIMELINE.push({ e, f }));
+    for (let k = 0; k < HOLD; k++) TIMELINE.push({ e, f: ep.frames.length - 1 });
+  });
+
+  function render(t: number): string {
+    const { e, f } = TIMELINE[t];
+    const ep = EPISODES[e];
+    const fr = ep.frames[f];
+    const last = f === ep.frames.length - 1;
+    const g: string[][] = Array.from({ length: H }, () => Array(W).fill("·"));
+    fr.preds.forEach((p, i) => (g[p[1]][p[0]] = i === 3 ? '<span class="hi">L</span>' : '<span class="mu">P</span>'));
+    g[fr.prey[1]][fr.prey[0]] = fr.caught ? '<span class="hi">×</span>' : '<span class="ink">o</span>';
+
+    const head = EPISODES.map((x, i) => (i === e ? `<span class="hi">▸ ${x.title}</span>` : `<span class="mu">  ${x.title}</span>`)).join("   ");
+    let status: string;
+    if (fr.caught) status = `<span class="hi">caught</span> in ${f} steps: L covered the last open side`;
+    else if (last) status = `<span class="ink">time's up</span>: the prey slipped through the gap L left open`;
+    else status = e === 0 ? `step ${String(f).padStart(2)}   L moves at random` : `step ${String(f).padStart(2)}   L heads for the open side`;
+    return `${head}\n\n` + g.map((row) => "  " + row.join(" ")).join("\n") + `\n\n<span class="mu">${status}</span>`;
+  }
+
+  document.querySelectorAll<HTMLElement>(".pursuit").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    let t = 0;
+    let timer: number | undefined;
+    const draw = () => (el.innerHTML = render(t));
+    const tick = () => { t = (t + 1) % TIMELINE.length; draw(); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 260); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused on the capture.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { t = TIMELINE.findIndex((x) => x.e === 1 && EPISODES[1].frames[x.f].caught); draw(); pause(); }
+    else { draw(); play(); }
+  });
+</script>

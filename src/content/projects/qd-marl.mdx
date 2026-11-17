@@ -1,0 +1,33 @@
+---
+title: "Quality-Diversity Multi-Agent Reinforcement Learning"
+date: "Summer 2020"
+sort: 2020.6
+summary: "Funded summer research on training teams of agents that are each different but still work together, tested in a predator-prey game I built."
+dek: "After my freshman year, I received funding to do summer research with the [Automatic Coordination of Teams Lab](http://act.cs.brown.edu/) (then at USC, now at Brown), under Professor Nora Ayanian and PhD student Eric Ewing. I built the predator-prey game we used for testing and trained an agent to coordinate with its teammates. I presented the work at the 2020 Viterbi Research Showcase and won Best Presentation."
+image: "/images/qd-ma-rl.gif"
+imageCaption: "From the actual project. Brown: prey · Black: programmed predators · Purple: predator in training"
+tags: ["Python", "Reinforcement Learning", "Multi-Agent Systems"]
+stack: ["Python", "PyTorch", "Reinforcement Learning", "Multi-Agent Systems"]
+links:
+  lab: "http://act.cs.brown.edu/"
+---
+
+import PursuitGame from "../../components/PursuitGame.astro";
+
+## The idea
+
+In multi-agent reinforcement learning, a team is usually trained toward a single best strategy, so its agents tend to converge on the same behavior. Human teams don't work that way. People bring different strengths and weaknesses, and the team is better for it. We wanted agents that worked like that: different from one another, but still a team.
+
+**Quality-diversity** methods are one way to get there. Instead of rewarding a team only for how well it performs (quality), they also reward it for how differently its agents behave (diversity). The challenge is balancing both against teamwork, so the agents become specialists without forgetting how to cooperate.
+
+## My part: the pursuit game
+
+To test these ideas, I built a predator-prey game known as the pursuit domain: four predators have to surround a prey on a grid. I programmed three of the predators with fixed behavior and trained the fourth with reinforcement learning, so it had to learn to coordinate with teammates it couldn't control. Starting with a single learner kept the problem manageable before training whole teams at once.
+
+<PursuitGame />
+
+## Takeaways
+
+I did this project during the COVID summer of 2020, when machine learning was an exciting field to be getting into. Getting agents to be different from each other and still cooperate the way people do turned out to be a hard problem.
+
+In the end, the research hit a dead end and never turned into a paper. It still taught me a lot about what research really looks like: you explore an idea as far as it goes, and sometimes it doesn't work out.
