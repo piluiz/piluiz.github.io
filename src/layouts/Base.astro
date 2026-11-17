@@ -138,6 +138,16 @@ _/__|_\_
             c.style.setProperty("--fade-delay", (-rnd() * 28).toFixed(0) + "s");
             (rnd() < 0.5 ? far : near).appendChild(c);
           }
+          // one cloud always near the top right
+          const top = document.createElement("span");
+          top.className = "cloud";
+          top.textContent = CLOUDS[0];
+          top.style.top = "90px";
+          top.style.right = Math.round(Math.max(24, gutter * 0.3)) + "px";
+          top.style.setProperty("--dur", "34s");
+          top.style.setProperty("--fade", "22s");
+          top.style.setProperty("--fade-delay", "-6s");
+          near.appendChild(top);
           onScroll();
           return;
         }
