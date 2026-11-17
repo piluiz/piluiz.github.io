@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GPU-Accelerated GPT-2 Inference · Pilar Luiz</title><meta name="description" content="GPT-2 inference kernels written from scratch in CUDA, then optimized with tiling, Tensor Cores, Flash Attention, and KV caching."><link rel="canonical" href="https://piluiz.github.io/projects/gpt2-inference/"><link rel="icon" href="/favicon.png"><meta property="og:title" content="GPU-Accelerated GPT-2 Inference · Pilar Luiz"><meta property="og:description" content="GPT-2 inference kernels written from scratch in CUDA, then optimized with tiling, Tensor Cores, Flash Attention, and KV caching."><meta property="og:url" content="https://piluiz.github.io/projects/gpt2-inference/"><meta property="og:image" content="https://piluiz.github.io/images/Full_GPT_architecture.png"><meta name="theme-color" content="#0c0c0d"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=Luckiest+Guy&display=swap"><!-- apply the saved theme before paint (dark is the default) --><script>
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script><link rel="stylesheet" href="/_astro/Base.CBzE3lcw.css"><style>.tiling[data-astro-cid-y556cszq]{margin:28px 0}.tiling[data-astro-cid-y556cszq] pre[data-astro-cid-y556cszq]{font:13px/1.45 var(--mono);color:var(--faint);border:0;margin:0 0 12px;padding:0;overflow-x:auto}.tiling[data-astro-cid-y556cszq] .hot{color:var(--accent)}.tiling[data-astro-cid-y556cszq] .sweep{color:var(--muted)}.tiling[data-astro-cid-y556cszq] .done{color:var(--ink);opacity:.55}.tiling[data-astro-cid-y556cszq] .lbl{color:var(--ink)}.tiling[data-astro-cid-y556cszq] .eq{color:var(--muted)}.tiling[data-astro-cid-y556cszq] .ctrl[data-astro-cid-y556cszq]{font:12px var(--mono);color:var(--accent);cursor:pointer;background:0 0;border:0;margin-bottom:8px;padding:0}.tiling[data-astro-cid-y556cszq] .note[data-astro-cid-y556cszq]{font:12px/1.6 var(--mono);color:var(--muted);margin:0 0 6px}
+</style></head><body><div class="sky" aria-hidden="true"></div><div class="wrap"><header class="site"><a class="home" href="/" title="home"><span class="ps">$</span> cd <b>~</b><span class="cmt">  # pilar luiz</span></a><nav aria-label="Main"><a href="/projects/" aria-current="page">projects</a><button class="theme-toggle" type="button" aria-label="Toggle light and dark theme">[light]</button></nav></header><main><div class="crumb"><a href="/">~</a> / <a href="/projects/">projects</a> / gpt2-inference</div><article><h1 class="page-title">GPU-Accelerated GPT-2 Inference</h1><div class="meta">fall 2025 · <span class="course">uiuc ece 408</span> · <span class="tag">#cuda</span><span class="tag"> #c++</span><span class="tag"> #machine-learning</span></div><p class="dek">My team built GPT-2 inference in CUDA for UIUC's ECE 408, then profiled and optimized every kernel on NCSA's A40 GPUs. My main contribution was the KV cache, which made token generation 2.5× faster.</p><figure><a class="zoom" href="/images/Full_GPT_architecture.png" target="_blank" rel="noopener" title="Open full size"><img src="/images/Full_GPT_architecture.png" alt="GPU-Accelerated GPT-2 Inference" loading="lazy"></a><div class="hint">click to enlarge</div></figure><div class="prose"><h2 id="overview">Overview</h2>
+<p>We implemented GPT-2 inference on the GPU, writing a CUDA kernel for every operation in the forward pass. That includes multi-head attention, along with the matrix multiplications, layer normalization, and feed-forward layers around it.</p>
+<p>Over several milestones, we implemented a wide range of kernel optimizations and profiled each one with Nsight Systems and Nsight Compute to find the bottlenecks and decide what to try next.</p>
+<blockquote>
+<p>The most interesting part was finding combinations that worked well together. Some optimizations complement each other, while others overlap or cancel out each other’s gains, so the fastest version wasn’t just every optimization stacked together.</p>
+</blockquote>
+<h2 id="my-part-the-kv-cache">My part: the KV cache</h2>
+<p>GPT-2 generates text one token at a time. Without a cache, every new token recomputes the keys and values for the whole sequence so far. The KV cache stores them instead: each of the 12 layers keeps its K and V in a buffer laid out as <code>(layer, batch, head, max_seq_len, head_dim)</code>, and each new token just appends its own.</p>
+<p>That changes the shape of the work. Each step processes a single token (T = 1) instead of the full sequence, so attention becomes one query row against the cached keys. That let us write specialized single-query attention kernels and drop causal masking entirely, since every cached token is already in the past.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Baseline</th>
+<th>KV cache</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Per-token latency</td>
+<td>20.8 ms</td>
+<td>8.4 ms</td>
+<td><strong>2.49× faster</strong></td>
+</tr>
+<tr>
+<td>Throughput</td>
+<td>48 tokens/s</td>
+<td>120 tokens/s</td>
+<td><strong>2.49× faster</strong></td>
+</tr>
+<tr>
+<td>Total kernel time</td>
+<td>139.1 ms</td>
+<td>57.6 ms</td>
+<td><strong>2.42× faster</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Two results surprised me. Kernel launches went <em>up</em> 5.8× (171 → 984), because generation now runs every layer once per token, but each call got so much cheaper (matmul went from 3.15 ms to 0.17 ms per call) that total time still dropped. And achieved occupancy fell from 72% to 16%, which was fine: decoding one token at a time is limited by memory bandwidth, not thread count. Each step streams the weights and the cache through the GPU while doing very little math.</p>
+</blockquote>
+<h2 id="other-optimizations">Other optimizations</h2>
+<h3 id="matrix-multiplication">Matrix multiplication</h3>
+<section class="box tiling" data-astro-cid-y556cszq><div class="label" data-astro-cid-y556cszq>[ <b data-astro-cid-y556cszq>tiling.gif</b> ]</div><button class="ctrl" type="button" data-astro-cid-y556cszq>[ pause ]</button><pre class="grid" aria-label="Animated diagram of tiled matrix multiplication: tiles of A and B are loaded into shared memory to build each tile of C" data-astro-cid-y556cszq></pre><p class="note" data-astro-cid-y556cszq><span class="hot" data-astro-cid-y556cszq>██</span> tiles in shared memory · <span class="sweep" data-astro-cid-y556cszq>░░</span> the row/column being swept ·<span class="done" data-astro-cid-y556cszq>██</span> finished output tiles<br data-astro-cid-y556cszq>Each value loaded from global memory gets reused by every thread in the tile.</p></section><script type="module">var e=[`░░`,`▒▒`,`▓▓`];function t(t){let n=Math.min(t,26),r=Math.floor(n/3),i=Math.floor(r/3),a=r%3,o=n%3,s=t>=27,c=(e,t)=>s?`··`:e===i&&t===o?`<span class="hot">██</span>`:e===i?`<span class="sweep">░░</span>`:`··`,l=(e,t)=>s?`··`:e===o&&t===a?`<span class="hot">██</span>`:t===a?`<span class="sweep">░░</span>`:`··`,u=(t,n)=>{let i=t*3+n;return s||i<r?`<span class="done">██</span>`:i===r?`<span class="hot">${e[o]}</span>`:`··`},d=`<span class="lbl">    A${` `.repeat(8)}     B${` `.repeat(8)}     C</span>\n`;for(let e=0;e<3;e++){let t=t=>Array.from({length:3},(n,r)=>t(e,r)).join(` `),n=e===1?` × `:`   `,r=e===1?` = `:`   `;d+=`  ${t(c)}${n}  ${t(l)}${r}  ${t(u)}\n`}return d+=s?`
+<span class="eq">  done: every tile of C computed</span>`:`\n<span class="eq">  C[${i}][${a}] += A[${i}][${o}] · B[${o}][${a}]    k = ${o+1}/3</span>`,d}document.querySelectorAll(`.tiling`).forEach(e=>{let n=e.querySelector(`.grid`),r=e.querySelector(`.ctrl`),i=0,a,o=()=>n.innerHTML=t(i),s=()=>{i=i>=30?0:i+1,o()},c=()=>{a||=window.setInterval(s,420),r.textContent=`[ pause ]`},l=()=>{clearInterval(a),a=void 0,r.textContent=`[ ▶ play ]`};r.addEventListener(`click`,()=>a?l():c()),window.matchMedia(`(prefers-reduced-motion: reduce)`).matches?(i=13,o(),l()):(o(),c())});</script>
+<ul>
+<li><strong>Register and shared-memory tiling</strong> to reuse data and cut memory traffic</li>
+<li><strong>Tensor Cores (TF32)</strong> for faster matrix math on Ampere and newer GPUs</li>
+<li><strong>Split-K decomposition</strong> to split GEMMs along K for more parallelism</li>
+<li><strong>cuBLAS and CUTLASS</strong> for highly tuned GEMMs on Tensor Cores</li>
+</ul>
+<h3 id="attention">Attention</h3>
+<ul>
+<li><strong>Flash Attention</strong> with IO-aware tiling to avoid materializing the full attention matrix</li>
+<li><strong>Windowed (local) attention</strong> to limit the quadratic cost on long sequences</li>
+</ul>
+<h3 id="everything-else">Everything else</h3>
+<ul>
+<li><strong>Faster reductions</strong> for parallel sums across thread blocks</li>
+<li><strong>Constant memory</strong> for small, frequently read data</li>
+<li><strong><code>__restrict__</code></strong> pointers so the compiler can optimize more aggressively</li>
+<li><strong>Configuration sweeps</strong> over block sizes, thread counts, and loop unrolling</li>
+</ul></div><section class="box"><div class="label">[ <b>stack</b> ]</div><p class="stack">CUDA · C++ · cuBLAS · CUTLASS · Nsight Systems · Nsight Compute</p></section><section class="box"><div class="label">[ <b>links</b> ]</div><div class="linkbox"><a href="/documents/ECE408_Milestone_3_Report.pdf" target="_blank" rel="noopener">project report</a></div></section></article></main><footer class="site"><span>© 2026 pilar luiz</span><span>the car is real → <a href="https://www.instagram.com/pilarsprojectcar/" target="_blank" rel="noopener">@pilarsprojectcar</a></span></footer></div><div class="drive" aria-hidden="true"><div class="lane"></div><pre class="car">  ____
+_/__|_\_
+'-o--o-'</pre><pre class="flag">|▚▞▚
+|▞▚▞
+|</pre></div><script type="module">var e=document.documentElement,t=()=>window.matchMedia(`(prefers-reduced-motion: reduce)`).matches,n=document.querySelectorAll(`.theme-toggle`),r=()=>{let t=e.getAttribute(`data-theme`)!==`light`;n.forEach(e=>e.textContent=t?`[light]`:`[dark]`)};n.forEach(t=>t.addEventListener(`click`,()=>{let t=e.getAttribute(`data-theme`)===`light`?`dark`:`light`;e.setAttribute(`data-theme`,t);try{localStorage.setItem(`theme`,t)}catch{}r(),o()})),r();var i=[`*`,`+`,`.`,`·`,`'`,`✦`,`⋆`,`*`,`.`],a=[`    .--.
+ .-(    ).
+(___.__)__)`,`  .-.
+ (   ).
+(___(__)`,`   .--.
+ .(    )-.
+(__(__.___)`];function o(){let t=document.querySelector(`.sky`);if(!t)return;t.innerHTML=``;let n=document.documentElement.clientWidth,r=document.body.scrollHeight,o=(n-720)/2;if(o<90)return;let s=7,c=()=>((s=s*16807%2147483647)-1)/2147483646,u=document.createElement(`div`),d=document.createElement(`div`);if(u.className=d.className=`layer`,u.dataset.speed=`0.45`,d.dataset.speed=`0.2`,t.append(u,d),e.getAttribute(`data-theme`)===`light`){if(o<140){l();return}let e=Math.round(r/170);for(let t=0;t<e;t++){let e=document.createElement(`span`);e.className=`cloud`,e.textContent=a[Math.floor(c()*a.length)],e.style.top=Math.round(c()*(r-80)+20)+`px`,e.style[c()<.5?`left`:`right`]=Math.round(16+c()*(o-120))+`px`,e.style.setProperty(`--dur`,(24+c()*24).toFixed(0)+`s`),e.style.setProperty(`--delay`,(-c()*40).toFixed(0)+`s`),e.style.setProperty(`--fade`,(14+c()*14).toFixed(0)+`s`),e.style.setProperty(`--fade-delay`,(-c()*28).toFixed(0)+`s`),(c()<.5?u:d).appendChild(e)}let t=Math.round(r/420);for(let e=0;e<t;e++){let e=document.createElement(`span`);e.className=`bird`,e.textContent=c()<.5?`v`:`v  v`,e.style.top=Math.round(c()*(r-40)+20)+`px`,e.style[c()<.5?`left`:`right`]=Math.round(24+c()*(o-80))+`px`,d.appendChild(e)}l();return}let f=Math.round(r/48);for(let e=0;e<f;e++){let e=document.createElement(`span`),t=c()<.5;e.style.top=Math.round(c()*(r-40)+20)+`px`,e.style[t?`left`:`right`]=Math.round(24+c()*(o-72))+`px`,e.textContent=i[Math.floor(c()*i.length)],c()<.18&&e.classList.add(`y`),c()<.65&&(e.classList.add(`tw`),e.style.setProperty(`--dur`,(2.5+c()*3.5).toFixed(1)+`s`),e.style.setProperty(`--delay`,(-c()*6).toFixed(1)+`s`)),c()<.15&&(e.style.fontSize=`20px`),c()<.2&&e.classList.add(`sp`),(c()<.5?u:d).appendChild(e)}l()}var s=[`.`,`+`,`*`,`✦`,`*`,`+`,`.`];setInterval(()=>{let e=document.querySelectorAll(`.sky span.sp`);if(!e.length||document.hidden)return;let t=e[Math.floor(Math.random()*e.length)],n=t.textContent,r=0,i=setInterval(()=>{t.textContent=s[r++],r>=s.length&&(clearInterval(i),t.textContent=n)},140)},700);var c=!1;function l(){let e=document.documentElement.scrollHeight-innerHeight,n=e>0?Math.min(1,Math.max(0,scrollY/e)):0,r=document.querySelector(`.drive .car`),i=document.querySelector(`.drive .flag`);if(r&&i){let e=i.getBoundingClientRect().left-24-r.offsetWidth-16;r.style.transform=`translateX(${Math.max(0,e*n)}px)`}t()||document.querySelectorAll(`.sky .layer`).forEach(e=>{e.style.transform=`translateY(${scrollY*parseFloat(e.dataset.speed||`0`)}px)`}),c=!1}addEventListener(`scroll`,()=>{c||(c=!0,requestAnimationFrame(l))},{passive:!0});var u;addEventListener(`resize`,()=>{clearTimeout(u),u=window.setTimeout(o,150)}),addEventListener(`load`,o),document.fonts?.ready.then(o),o();</script></body></html>
