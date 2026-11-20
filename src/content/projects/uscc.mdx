@@ -1,0 +1,71 @@
+---
+title: "USCC: A Compiler for a Subset of C"
+date: "Spring 2022"
+course: "USC ITP 439"
+sort: 2022.3
+summary: "A compiler for a small subset of C on LLVM: parser, semantic analysis, IR generation, SSA construction, optimization passes, and a graph-coloring register allocator."
+dek: "USCC compiles USC, a small subset of C, down to native code. I built it over six assignments in USC's ITP 439 (Compiler Design). I implemented the core of every stage: the front end, SSA construction, the optimization passes, and a graph-coloring register allocator, all on top of LLVM."
+image: "/images/uscc.png"
+hideImage: true
+tags: ["C++", "LLVM", "Compilers"]
+stack: ["C++", "LLVM", "SSA", "Register Allocation"]
+---
+
+import RegAlloc from "../../components/RegAlloc.astro";
+import LicmExample from "../../components/LicmExample.astro";
+
+## From source to native code
+
+Each assignment added one stage of the compiler.
+
+**Front end**
+
+1. **Parse:** a hand-written recursive descent parser turns tokens into an abstract syntax tree, and recovers from syntax errors so it can report more than one at a time.
+2. **Check:** semantic analysis builds scoped symbol tables, checks types (including conversions between `char` and `int`), and validates function calls and return statements.
+
+**Middle end**
+
+3. **Generate IR:** each node in the tree emits its own LLVM IR, covering control flow, arrays, strings, and function calls.
+4. **Build SSA:** instead of storing every local variable in memory, the compiler builds SSA form directly while it generates IR, using the algorithm from Braun et al. (2013). It adds phi nodes only where control flow merges and removes the ones that turn out to be redundant.
+5. **Optimize:** four passes clean up the IR: constant folding, constant branch folding, dead block removal, and loop-invariant code motion, which walks the dominator tree to move work that doesn't change between iterations out of the loop.
+
+**Back end**
+
+6. **Allocate registers:** the last stage decides which variables get to live in the CPU's registers, and LLVM turns the result into assembly.
+
+Each stage was checked against the course's test suite, which compiles test programs (like quicksort) to native code, runs them, and compares their output.
+
+## An example: hoisting work out of a loop
+
+Here's a small USC function. `scale * 4` gives the same answer on every iteration, so there's no reason to compute it inside the loop:
+
+```c
+void printScaled(int n, int scale)
+{
+    int i = 0;
+    while (i < n)
+    {
+        int step = scale * 4;
+        printf("%d\n", i * step);
+        ++i;
+    }
+}
+```
+
+Below is the real LLVM IR my compiler produces for it, trimmed to the important lines. Thanks to the SSA stage, `i` is already a phi node instead of a variable in memory. With optimizations on, loop-invariant code motion moves the multiply out of the loop body and into the block before the loop, so it runs once instead of on every iteration.
+
+<LicmExample />
+
+## Register allocation
+
+A CPU only has a few registers, so the compiler has to decide which variables share them. Two variables that are in use at the same time can't share one, which turns the problem into graph coloring: every variable is a node, an edge connects two variables that are live at the same time, and each register is a color.
+
+My allocator builds that interference graph from each variable's live range and simplifies it Chaitin-style. It repeatedly removes a variable with fewer neighbors than there are registers, since that one is guaranteed to fit later. When every variable has too many neighbors, it picks the cheapest one to spill to memory. LLVM's allocator then assigns registers in the reverse of that order, and sometimes a spill candidate still finds a free register.
+
+<RegAlloc />
+
+## Takeaways
+
+At the time, the most interesting part was understanding this piece of the software stack, specifically how source code gets optimized and translated into machine instructions. Before this class, compiling was mostly a black box to me. I appreciated understanding each stage, from parsing code into a tree, to rewriting it into a form that's easier to optimize, to deciding which values get to live in registers.
+
+It also made me a better programmer. I have a much better sense of what the compiler can clean up for me, what it can't, and what actually happens when I compile my code.

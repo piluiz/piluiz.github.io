@@ -1,0 +1,56 @@
+---
+// Side-by-side LLVM IR from USCC for printScaled(), without and with -O.
+// Trimmed real output (`uscc -p` vs `uscc -p -O`); the hoisted multiply is highlighted.
+---
+
+<section class="box licm">
+  <div class="label">[ <b>uscc -p</b> vs <b>uscc -p -O</b> ]</div>
+  <div class="cols">
+    <div>
+      <div class="cap">before: <span class="mu">multiply inside the loop</span></div>
+      <pre><span class="lbl">entry:</span>
+  br label %while.cond
+
+<span class="lbl">while.cond:</span>
+  %i = phi i32 [ %inc, %while.body ],
+               [ 0, %entry ]
+  <span class="mu">...</span>
+
+<span class="lbl">while.body:</span>
+<span class="mv">  %mult = mul i32 %scale, 4</span>
+  %mult3 = mul i32 %i, %mult
+  <span class="mu">...</span></pre>
+    </div>
+    <div>
+      <div class="cap">after: <span class="mu">hoisted before the loop</span></div>
+      <pre><span class="lbl">entry:</span>
+<span class="mv">  %mult = mul i32 %scale, 4</span>
+  br label %while.cond
+
+<span class="lbl">while.cond:</span>
+  %i = phi i32 [ %inc, %while.body ],
+               [ 0, %entry ]
+  <span class="mu">...</span>
+
+<span class="lbl">while.body:</span>
+  %mult3 = mul i32 %i, %mult
+  <span class="mu">...</span></pre>
+    </div>
+  </div>
+</section>
+
+<style>
+  .licm { margin: 28px 0; padding-bottom: 18px; }
+  .licm .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .licm .cols > div { min-width: 0; }
+  .licm .cap { font: 12px var(--mono); color: var(--ink); margin: 0 0 8px; }
+  .licm pre {
+    margin: 0; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: var(--ink);
+    background: var(--soft); border: 1px solid var(--rule); overflow-x: auto; white-space: pre;
+  }
+  .licm .lbl { color: var(--muted); }
+  .licm .mu { color: var(--faint); }
+  .licm .mv { color: var(--accent); font-weight: 600; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .licm .tag { color: var(--accent); }
+  @media (max-width: 720px) { .licm .cols { grid-template-columns: 1fr; } }
+</style>

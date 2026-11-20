@@ -1,0 +1,145 @@
+---
+// Animated graph-coloring register allocation (Chaitin-Briggs style).
+// Each node is a variable's live range; an edge means the two are live at
+// the same time, so they can't share a register. With K = 3 registers:
+// repeatedly remove a node with fewer than K neighbors (it will always get a
+// register); if none exists, remove the cheapest-to-spill node as a spill
+// candidate. Then pop the stack and give each node a register its colored
+// neighbors aren't using. An illustration, not output from the compiler.
+---
+
+<section class="box regalloc">
+  <div class="label">[ <b>regalloc.gif</b> ]</div>
+  <button class="ctrl" type="button">[ pause ]</button>
+  <pre class="grid" aria-label="Animated register allocation: nodes of an interference graph are removed one at a time onto a stack, then popped back off and assigned one of three registers"></pre>
+  <p class="note">
+    Each letter is a variable. A line means both are in use at the same time, so they need different
+    registers. Here there are only <span class="ink">3 registers</span> (my allocator used 4): <span class="r1">r1</span> · <span class="r2">r2</span> · <span class="r3">r3</span>.
+  </p>
+</section>
+
+<style>
+  .regalloc { margin: 28px 0; }
+  .regalloc pre { margin: 0 0 12px; font: 13px/1.35 var(--mono); overflow-x: auto; color: var(--faint); border: 0; padding: 0; }
+  .regalloc :global(.hi) { color: var(--accent); font-weight: 600; }
+  .regalloc :global(.ink) { color: var(--ink); font-weight: 600; }
+  .regalloc :global(.mu) { color: var(--muted); }
+  .regalloc :global(.edge) { color: var(--muted); }
+  .regalloc :global(.gone) { color: var(--faint); opacity: 0.45; }
+  .regalloc :global(.r1) { color: #d9822b; font-weight: 600; }
+  .regalloc :global(.r2) { color: #3f8fd2; font-weight: 600; }
+  .regalloc :global(.r3) { color: #4caf6e; font-weight: 600; }
+  .regalloc .ctrl { font: 12px var(--mono); background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 8px; }
+  .regalloc .note { font: 12px/1.6 var(--mono); color: var(--muted); margin: 0 0 6px; }
+</style>
+
+<script>
+  const K = 3;
+  // the graph, hand-drawn; MASK says which node (lowercase) or edge (uppercase) each character belongs to
+  const ART = [
+    "(a)─────────────(b)",
+    " │ `-._     _.-' │",
+    " │     `(c)'     │",
+    " │ _.-'     `-._ │",
+    "(d)─────────────(e)─────(f)",
+  ];
+  const MASK = [
+    "aaaAAAAAAAAAAAAAbbb",
+    " D BBBB     CCCC E",
+    " D     BcccC     E",
+    " D FFFF     GGGG E",
+    "dddHHHHHHHHHHHHHeeeIIIIIfff",
+  ];
+  const EDGE_ID = "ABCDEFGHI";
+  // how often each variable is used: the cheapest one to spill is the least used
+  const COST: Record<string, number> = { a: 4, b: 5, c: 6, d: 2, e: 7, f: 3 };
+  const EDGES: [string, string][] = [
+    ["a", "b"], ["a", "c"], ["b", "c"], ["a", "d"], ["b", "e"], ["c", "d"], ["c", "e"], ["d", "e"], ["e", "f"],
+  ];
+  const NODES = ["a", "b", "c", "d", "e", "f"];
+  const nbrs = (n: string) => EDGES.filter((e) => e.includes(n)).map((e) => (e[0] === n ? e[1] : e[0]));
+
+  type Frame = { removed: Set<string>; focus?: string; stack: string[]; regs: Map<string, number>; info: string };
+
+  function build(): Frame[] {
+    const frames: Frame[] = [];
+    const removed = new Set<string>();
+    const stack: string[] = [];
+    const regs = new Map<string, number>();
+    const snap = (n: number, info: string, focus?: string) => {
+      for (let i = 0; i < n; i++) frames.push({ removed: new Set(removed), focus, stack: [...stack], regs: new Map(regs), info });
+    };
+
+    snap(4, "interference graph: 6 variables, 3 registers");
+    // simplify: remove nodes with fewer than K live neighbors; otherwise the cheapest spill candidate
+    while (removed.size < NODES.length) {
+      const left = NODES.filter((n) => !removed.has(n));
+      const deg = (n: string) => nbrs(n).filter((m) => !removed.has(m)).length;
+      const easy = left.find((n) => deg(n) < K);
+      if (easy) {
+        snap(3, `${easy} has ${deg(easy)} neighbor${deg(easy) === 1 ? "" : "s"} (< 3): it will always fit`, easy);
+        removed.add(easy); stack.push(easy);
+        snap(2, `push ${easy} onto the stack`);
+      } else {
+        const spill = left.reduce((x, y) => (COST[y] < COST[x] ? y : x));
+        snap(4, "every node has 3+ neighbors: stuck", undefined);
+        snap(4, `pick the least-used variable, ${spill}, as a spill candidate`, spill);
+        removed.add(spill); stack.push(spill);
+        snap(2, `push ${spill} onto the stack`);
+      }
+    }
+    snap(3, "stack is full. now pop it in reverse order");
+    // select: pop and give each node a register its colored neighbors don't use
+    while (stack.length) {
+      const n = stack.pop()!;
+      removed.delete(n);
+      const used = new Set(nbrs(n).map((m) => regs.get(m)).filter((r) => r !== undefined));
+      const r = [1, 2, 3].find((x) => !used.has(x))!;
+      regs.set(n, r);
+      snap(n === "d" ? 5 : 3, n === "d" ? `pop d: its neighbors left r3 free, so the spill candidate fits after all` : `pop ${n}: give it r${r}`, n);
+    }
+    snap(12, "every variable has a register. no spills needed");
+    return frames;
+  }
+  const FRAMES = build();
+
+  const span = (c: string, s: string) => `<span class="${c}">${s}</span>`;
+
+  function render(f: Frame): string {
+    const cellClass = (m: string) => {
+      if (m >= "a" && m <= "f") {
+        const r = f.regs.get(m);
+        return f.focus === m ? "hi" : f.removed.has(m) ? "gone" : r ? `r${r}` : "ink";
+      }
+      const [u, v] = EDGES[EDGE_ID.indexOf(m)];
+      return f.removed.has(u) || f.removed.has(v) ? "gone" : "edge";
+    };
+    const graph = ART.map((row, y) =>
+      "    " + [...row].map((ch, x) => (MASK[y][x] && MASK[y][x] !== " " ? span(cellClass(MASK[y][x]), ch) : ch)).join(""),
+    ).join("\n");
+    const stack = f.stack.length ? f.stack.map((s) => span("ink", s)).join(" ") : span("mu", "(empty)");
+    const regs = NODES.filter((n) => f.regs.has(n)).map((n) => `${n} ${span(`r${f.regs.get(n)}`, `r${f.regs.get(n)}`)}`).join("  ");
+    return (
+      graph +
+      `\n\n${span("mu", "stack ")} [ ${stack} ]\n${span("mu", "regs  ")} ${regs || span("mu", "(none yet)")}\n${span("mu", "step  ")} ${span("hi", f.info)}`
+    );
+  }
+
+  document.querySelectorAll<HTMLElement>(".regalloc").forEach((box) => {
+    const el = box.querySelector<HTMLElement>(".grid")!;
+    const btn = box.querySelector<HTMLButtonElement>(".ctrl")!;
+    const LAST = FRAMES.length - 1;
+    let f = 0;
+    let timer: number | undefined;
+    const draw = () => (el.innerHTML = render(FRAMES[Math.min(f, LAST)]));
+    const tick = () => { f = f >= LAST ? 0 : f + 1; draw(); };
+    const play = () => { if (!timer) timer = window.setInterval(tick, 450); btn.textContent = "[ pause ]"; };
+    const pause = () => { clearInterval(timer); timer = undefined; btn.textContent = "[ ▶ play ]"; };
+    btn.addEventListener("click", () => (timer ? pause() : play()));
+
+    // Autoplay normally; with Reduce Motion on, start paused on the spill decision.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      f = FRAMES.findIndex((x) => x.info.startsWith("pick the least-used")); draw(); pause();
+    } else { draw(); play(); }
+  });
+</script>
