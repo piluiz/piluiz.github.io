@@ -36,11 +36,14 @@ const person = {
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <link rel="icon" href="/favicon.png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    {image && <meta property="og:image" content={new URL(image, Astro.site)} />}
+    <meta property="og:image" content={new URL(image ?? "/og.jpg", Astro.site)} />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta property="og:type" content={path === "/" ? "profile" : "article"} />
     <meta property="og:site_name" content="Pilar Luiz" />
     <meta name="theme-color" content="#0c0c0d" />
