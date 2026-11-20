@@ -142,6 +142,8 @@ details.xp summary .t .tog { font: 13px var(--mono); color: var(--faint); margin
 details.xp summary:hover .t { color: var(--accent); }
 details.xp[open] summary .t .tog::after { content: "[-]"; }
 details.xp:not([open]) summary .t .tog::after { content: "[+]"; }
+details.xp .team { margin: -6px 0 8px 92px; font: 12.5px var(--mono); color: var(--faint); }
+details.xp .team + ul { margin-top: 0; }
 details.xp ul { margin: -6px 0 14px 92px; padding: 0; list-style: none; font-size: .88em; color: var(--muted); }
 details.xp li { position: relative; padding-left: 1.3em; margin: 6px 0; line-height: 1.55; }
 details.xp li::before { content: "*"; position: absolute; left: 0; color: var(--accent); font-family: var(--mono); }
@@ -266,7 +268,7 @@ footer.site a:hover { color: var(--accent); }
   .page-title { font-size: 27px; }
   .row { grid-template-columns: 1fr; gap: 0; }
   a.row .t::before { display: none; }
-  details.xp ul { margin-left: 0; }
+  details.xp ul, details.xp .team { margin-left: 0; }
   .box { padding: 22px 14px 8px; }
 }
 
